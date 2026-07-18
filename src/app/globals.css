@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+/* Class-based dark mode: toggled by adding/removing `dark` on <html>
+   (see ThemeContext). Using a custom variant rather than the OS-only
+   `prefers-color-scheme` so the in-app Light/Dark toggle has full control. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", var(--font-sans);
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Fine-grained gray steps used throughout the design system for subtle
+     border/text tints that sit between the default Tailwind stops. */
+  --color-gray-150: oklch(94.75% 0.0045 264.5);
+  --color-gray-550: oklch(49.85% 0.0285 260.5);
+  --color-gray-850: oklch(24.4% 0.0335 260.75);
+
+  /* Brand palette: dark green #0B5D2A + gold #D4AF37, mapped onto the emerald/amber scales already used app-wide. */
+  --color-emerald-50: #F1FDF6;
+  --color-emerald-100: #DFFBEA;
+  --color-emerald-200: #BBF7D1;
+  --color-emerald-300: #7FF0AA;
+  --color-emerald-400: #32E776;
+  --color-emerald-500: #17C057;
+  --color-emerald-600: #129B46;
+  --color-emerald-700: #0F7B38;
+  --color-emerald-800: #0B5D2A;
+  --color-emerald-900: #084720;
+  --color-emerald-950: #052E15;
+
+  --color-amber-50: #FCFAF2;
+  --color-amber-100: #F6EED5;
+  --color-amber-200: #EDDDAB;
+  --color-amber-300: #E4CD81;
+  --color-amber-400: #D9B950;
+  --color-amber-500: #D4AF37;
+  --color-amber-600: #B69427;
+  --color-amber-700: #997C21;
+  --color-amber-800: #77611A;
+  --color-amber-900: #5E4C14;
+  --color-amber-950: #493B10;
+}
+
+/* Custom premium scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(11, 93, 42, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.45);
+}
+
+/* Custom premium animations */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.18; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 8s infinite ease-in-out;
+}
+
+/* Elegant card transition and border glow overrides */
+.premium-card {
+  background: white;
+  border: 1px solid rgba(11, 93, 42, 0.08);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.premium-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(212, 175, 55, 0.25);
+  box-shadow: 0 20px 40px -15px rgba(212, 175, 55, 0.1);
+}
+
+.dark .premium-card {
+  background: #0d1f16;
+  border-color: rgba(212, 175, 55, 0.12);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.35);
+}
+
+.dark .premium-card:hover {
+  border-color: rgba(212, 175, 55, 0.3);
+  box-shadow: 0 20px 40px -15px rgba(212, 175, 55, 0.15);
+}
+
+html {
+  color-scheme: light;
+  transition: background-color 0.3s ease;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #FAF9F5;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html.dark body {
+  background-color: #06140c;
+}
+
+/* -------------------------------------------------------------------
+   Global dark-mode repaint: the whole app is built from a small,
+   consistently reused set of utility classes (headings always
+   text-emerald-950, body copy always text-gray-500/600, cards always
+   bg-white, subtle sections always bg-gray-50, hairline borders always
+   border-gray-150/200). Overriding those specific compiled classes
+   under a `.dark` ancestor dark-mode-ifies every page at once instead
+   of hand-editing dark: variants into every component.
+   ------------------------------------------------------------------- */
+.dark .text-emerald-950 { color: #eaf6ee; }
+.dark .text-gray-400 { color: #7a8a80; }
+.dark .text-gray-500 { color: #93a39a; }
+.dark .text-gray-600 { color: #a9b8b0; }
+.dark .text-gray-700 { color: #c1cec7; }
+.dark .bg-white { background-color: #0d1f16; }
+.dark .bg-gray-50 { background-color: #09160f; }
+.dark .bg-gray-100 { background-color: #122a1c; }
+.dark .border-gray-150 { border-color: rgba(212, 175, 55, 0.1); }
+.dark .border-gray-200 { border-color: rgba(212, 175, 55, 0.14); }
+.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: rgba(212, 175, 55, 0.1); }
+.dark .shadow-sm, .dark .shadow-md, .dark .shadow-lg, .dark .shadow-xl {
+  --tw-shadow-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Reusable gold gradient for premium CTAs and gold-on-text accents */
+.gold-gradient-text {
+  background: linear-gradient(135deg, #F0DE9E 0%, #D4AF37 45%, #B69427 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gold-gradient-bg {
+  background: linear-gradient(135deg, #E4CD81 0%, #D4AF37 50%, #B69427 100%);
+}
