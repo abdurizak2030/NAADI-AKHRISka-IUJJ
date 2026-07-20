@@ -110,9 +110,11 @@ export default function VideoPlayer({ videoUrl, youtubeId, title, posterUrl, aut
   }, []);
 
   useEffect(() => {
-    if (autoPlay && videoRef.current) {
-      videoRef.current.muted = true;
-      videoRef.current.play().catch((err) => {
+    const video = videoRef.current;
+    if (autoPlay && video) {
+      video.muted = false;
+      video.volume = 1;
+      video.play().catch((err) => {
         console.warn('Video autoplay failed:', err);
       });
     }
