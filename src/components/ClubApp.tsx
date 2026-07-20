@@ -316,8 +316,6 @@ export default function App() {
             <Media
               videos={videos}
               gallery={gallery}
-              token={token}
-              onLoginPrompt={() => setCurrentTab('login')}
             />
           </Suspense>
         )}

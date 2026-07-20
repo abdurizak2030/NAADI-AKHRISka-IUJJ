@@ -8,7 +8,7 @@
  */
 
 import { getPool } from '../db/pool';
-import { GalleryItem, PdfBook, VideoItem } from '../../types';
+import { GalleryItem, PdfBook, VideoItem } from '@/types';
 
 function toIso(v: string | Date): string {
   return v instanceof Date ? v.toISOString() : v;
