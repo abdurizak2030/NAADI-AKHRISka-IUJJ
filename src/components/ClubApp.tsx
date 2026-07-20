@@ -29,7 +29,6 @@ import {
   Article,
   PdfBook,
   VideoItem,
-  TalkItem,
   ClubEvent,
   GalleryItem,
   ClubSettings,
@@ -62,7 +61,6 @@ export default function App() {
   const [activeArticle, setActiveArticle] = useState<Article | null>(null);
   const [pdfs, setPdfs] = useState<PdfBook[]>([]);
   const [videos, setVideos] = useState<VideoItem[]>([]);
-  const [talks, setTalks] = useState<TalkItem[]>([]);
   const [events, setEvents] = useState<ClubEvent[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [settings, setSettings] = useState<ClubSettings | null>(null);
@@ -104,12 +102,6 @@ export default function App() {
     fetch(`${API_BASE_URL}/api/videos`)
       .then(safeJson)
       .then(data => { if (data && Array.isArray(data)) setVideos(data); })
-      .catch(err => console.error(err));
-
-    // Talks
-    fetch(`${API_BASE_URL}/api/talks`)
-      .then(safeJson)
-      .then(data => { if (data && Array.isArray(data)) setTalks(data); })
       .catch(err => console.error(err));
 
     // Events
@@ -323,7 +315,6 @@ export default function App() {
           <Suspense fallback={<RouteLoader />}>
             <Media
               videos={videos}
-              talks={talks}
               gallery={gallery}
               token={token}
               onLoginPrompt={() => setCurrentTab('login')}
@@ -375,7 +366,6 @@ export default function App() {
               articles={articles}
               pdfs={pdfs}
               videos={videos}
-              talks={talks}
               events={events}
               gallery={gallery}
               settings={settings}
@@ -415,7 +405,7 @@ export default function App() {
           <div className="space-y-2 text-xs text-emerald-200">
             <h4 className="text-amber-400 font-bold text-xs uppercase tracking-wider font-sans">{t('footer.contactHeading')}</h4>
             <p>{t('footer.emailPrefix')} {settings?.contactEmail || 'readingclub@jigjiga.edu'}</p>
-            <p>{t('footer.phonePrefix')} {settings?.contactPhone || '+251 915 744 321'}</p>
+            <p>{t('footer.phonePrefix')} {settings?.contactPhone || '+251 902 817 476'}</p>
             <p>{t('footer.locationLabel')}</p>
             {(settings?.tiktokUrl || settings?.facebookUrl || settings?.xUrl) && (
               <div className="flex items-center gap-2.5 pt-2">

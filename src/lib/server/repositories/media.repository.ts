@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Backs the "Library Management" (pdfs) and "Media Management"
- * (videos, talks/podcasts, gallery photos) sections of the Admin
+ * (videos, gallery photos) sections of the Admin
  * Dashboard, plus the matching public routes.
  */
 
 import { getPool } from '../db/pool';
-import { GalleryItem, PdfBook, TalkItem, VideoItem } from '../types';
+import { GalleryItem, PdfBook, VideoItem } from '../../types';
 
 function toIso(v: string | Date): string {
   return v instanceof Date ? v.toISOString() : v;
@@ -174,80 +174,6 @@ export async function deleteVideo(id: string): Promise<VideoItem | null> {
   const { rows } = await getPool().query<VideoRow>('DELETE FROM videos WHERE id = $1 RETURNING *', [id]);
   if (rows.length === 0) return null;
   return toVideo(rows[0]);
-}
-
-// ------------------------------- Talks --------------------------------
-
-interface TalkRow {
-  id: string;
-  title: string;
-  description: string;
-  audio_url: string | null;
-  speaker: string;
-  duration: string;
-  date: string;
-  created_at: string | Date;
-}
-
-function toTalk(row: TalkRow): TalkItem {
-  return {
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    audioUrl: row.audio_url ?? undefined,
-    speaker: row.speaker,
-    duration: row.duration,
-    date: typeof row.date === 'string' ? row.date : new Date(row.date).toISOString().split('T')[0],
-    createdAt: toIso(row.created_at),
-  };
-}
-
-export async function listTalks(): Promise<TalkItem[]> {
-  const { rows } = await getPool().query<TalkRow>('SELECT * FROM talks ORDER BY created_at DESC');
-  return rows.map(toTalk);
-}
-
-export async function createTalk(input: Partial<TalkItem>): Promise<TalkItem> {
-  const { rows } = await getPool().query<TalkRow>(
-    `INSERT INTO talks (title, description, audio_url, speaker, duration, date)
-     VALUES ($1, $2, $3, $4, $5, COALESCE($6, CURRENT_DATE)) RETURNING *`,
-    [
-      input.title,
-      input.description || '',
-      input.audioUrl || null,
-      input.speaker,
-      input.duration || '00:00',
-      input.date || null,
-    ]
-  );
-  return toTalk(rows[0]);
-}
-
-export async function updateTalk(id: string, updates: Partial<TalkItem>): Promise<TalkItem | null> {
-  const { rows } = await getPool().query<TalkRow>(
-    `UPDATE talks SET
-       title = COALESCE($2, title), description = COALESCE($3, description),
-       audio_url = COALESCE($4, audio_url), speaker = COALESCE($5, speaker),
-       duration = COALESCE($6, duration), date = COALESCE($7, date)
-     WHERE id = $1 RETURNING *`,
-    [
-      id,
-      updates.title ?? null,
-      updates.description ?? null,
-      updates.audioUrl ?? null,
-      updates.speaker ?? null,
-      updates.duration ?? null,
-      updates.date ?? null,
-    ]
-  );
-  if (rows.length === 0) return null;
-  return toTalk(rows[0]);
-}
-
-export async function deleteTalk(id: string): Promise<TalkItem | null> {
-  const { rows } = await getPool().query<TalkRow>('DELETE FROM talks WHERE id = $1 RETURNING *', [id]);
-  if (rows.length === 0) return null;
-  return toTalk(rows[0]);
 }
 
 // ------------------------------ Gallery --------------------------------

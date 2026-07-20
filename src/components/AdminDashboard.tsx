@@ -28,7 +28,6 @@ import {
   CheckCircle2,
   X,
   Video as VideoIcon,
-  Mic,
   ScrollText,
   Loader2,
   ImagePlus,
@@ -45,7 +44,6 @@ import {
   ArticleStatus,
   PdfBook,
   VideoItem,
-  TalkItem,
   ClubEvent,
   EventVisibility,
   GalleryItem,
@@ -64,7 +62,6 @@ interface AdminDashboardProps {
   articles: Article[];
   pdfs: PdfBook[];
   videos: VideoItem[];
-  talks: TalkItem[];
   events: ClubEvent[];
   gallery: GalleryItem[];
   settings: ClubSettings | null;
@@ -74,7 +71,7 @@ interface AdminDashboardProps {
 }
 
 type Tab = 'overview' | 'users' | 'articles' | 'library' | 'events' | 'media' | 'community' | 'messages' | 'settings';
-type MediaSubTab = 'videos' | 'talks' | 'gallery';
+type MediaSubTab = 'videos' | 'gallery';
 
 interface OverviewData {
   users: { total: number; admins: number; active: number };
@@ -84,7 +81,6 @@ interface OverviewData {
     draftArticles: number;
     pdfs: number;
     videos: number;
-    talks: number;
     gallery: number;
     events: number;
     upcomingEvents: number;
@@ -214,7 +210,6 @@ export default function AdminDashboard({
   articles,
   pdfs,
   videos,
-  talks,
   events,
   gallery,
   settings,
@@ -308,7 +303,6 @@ export default function AdminDashboard({
         <MediaTab
           token={token}
           videos={videos}
-          talks={talks}
           gallery={gallery}
           mediaTab={mediaTab}
           setMediaTab={setMediaTab}
@@ -355,9 +349,6 @@ export default function AdminDashboard({
       {modal?.type === 'video-form' && (
         <VideoFormModal token={token} onClose={() => setModal(null)} onSaved={refresh} existing={modal.data as VideoItem | undefined} />
       )}
-      {modal?.type === 'talk-form' && (
-        <TalkFormModal token={token} onClose={() => setModal(null)} onSaved={refresh} existing={modal.data as TalkItem | undefined} />
-      )}
       {modal?.type === 'gallery-form' && (
         <GalleryFormModal token={token} onClose={() => setModal(null)} onSaved={refresh} />
       )}
@@ -395,7 +386,6 @@ function OverviewTab({ data, logs }: { data: OverviewData | null; logs: AuditLog
         />
         <StatCard label="Library Books" value={data.content.pdfs} icon={Library} tint="bg-purple-100 text-purple-700" />
         <StatCard label="Video Lectures" value={data.content.videos} icon={VideoIcon} tint="bg-rose-100 text-rose-700" />
-        <StatCard label="Audio Talks" value={data.content.talks} icon={Mic} tint="bg-orange-100 text-orange-700" />
         <StatCard
           label="Upcoming Events"
           value={`${data.content.upcomingEvents}/${data.content.events}`}
@@ -1260,7 +1250,6 @@ function EventFormModal({
 function MediaTab({
   token,
   videos,
-  talks,
   gallery,
   mediaTab,
   setMediaTab,
@@ -1269,7 +1258,6 @@ function MediaTab({
 }: {
   token: string;
   videos: VideoItem[];
-  talks: TalkItem[];
   gallery: GalleryItem[];
   mediaTab: MediaSubTab;
   setMediaTab: (t: MediaSubTab) => void;
@@ -1279,11 +1267,6 @@ function MediaTab({
   const removeVideo = async (v: VideoItem) => {
     if (!confirm(`Tirtir muuqaalka "${v.title}"?`)) return;
     await fetch(`${API_BASE_URL}/api/videos/${v.id}`, { method: 'DELETE', headers: authHeaders(token, false) });
-    onChanged();
-  };
-  const removeTalk = async (t: TalkItem) => {
-    if (!confirm(`Tirtir falanqaynta "${t.title}"?`)) return;
-    await fetch(`${API_BASE_URL}/api/talks/${t.id}`, { method: 'DELETE', headers: authHeaders(token, false) });
     onChanged();
   };
   const removeGallery = async (g: GalleryItem) => {
@@ -1297,7 +1280,7 @@ function MediaTab({
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <h2 className="font-display font-bold text-xl text-emerald-950">Media Management</h2>
         <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
-          {(['videos', 'talks', 'gallery'] as MediaSubTab[]).map((t) => (
+          {(['videos', 'gallery'] as MediaSubTab[]).map((t) => (
             <button
               key={t}
               onClick={() => setMediaTab(t)}
@@ -1311,11 +1294,11 @@ function MediaTab({
         </div>
         <button
           onClick={() =>
-            openModal({ type: mediaTab === 'videos' ? 'video-form' : mediaTab === 'talks' ? 'talk-form' : 'gallery-form' })
+            openModal({ type: mediaTab === 'videos' ? 'video-form' : 'gallery-form' })
           }
           className="flex items-center gap-2 bg-emerald-900 hover:bg-emerald-800 text-white text-sm font-bold px-4 py-2.5 rounded-xl"
         >
-          <Plus size={16} /> Add {mediaTab === 'videos' ? 'Video' : mediaTab === 'talks' ? 'Talk' : 'Photo'}
+          <Plus size={16} /> Add {mediaTab === 'videos' ? 'Video' : 'Photo'}
         </button>
       </div>
 
@@ -1333,27 +1316,6 @@ function MediaTab({
                   <Pencil size={14} />
                 </button>
                 <button onClick={() => removeVideo(v)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {mediaTab === 'talks' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {talks.map((t) => (
-            <div key={t.id} className="premium-card rounded-2xl p-4">
-              <p className="font-bold text-sm text-emerald-950 truncate">{t.title}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {t.speaker} · {t.duration}
-              </p>
-              <div className="flex items-center justify-end gap-1.5 mt-3">
-                <button onClick={() => openModal({ type: 'talk-form', data: t })} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
-                  <Pencil size={14} />
-                </button>
-                <button onClick={() => removeTalk(t)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -1646,88 +1608,6 @@ function VideoFormModal({
           </Field>
         </div>
         <SubmitButton loading={loading} label={existing ? 'Save Changes' : 'Add Video'} />
-      </form>
-    </Modal>
-  );
-}
-
-function TalkFormModal({
-  token,
-  existing,
-  onClose,
-  onSaved,
-}: {
-  token: string;
-  existing?: TalkItem;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [form, setForm] = useState({
-    title: existing?.title || '',
-    description: existing?.description || '',
-    audioUrl: existing?.audioUrl || '',
-    speaker: existing?.speaker || '',
-    duration: existing?.duration || '',
-    date: existing?.date || '',
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const url = existing ? `${API_BASE_URL}/api/talks/${existing.id}` : `${API_BASE_URL}/api/talks`;
-      const method = existing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: authHeaders(token), body: JSON.stringify(form) });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Wax baa qaldamay.');
-        return;
-      }
-      onSaved();
-      onClose();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Modal title={existing ? 'Edit Talk' : 'Add Talk'} onClose={onClose}>
-      <form onSubmit={submit}>
-        <ErrorBanner message={error} />
-        <Field label="Title">
-          <input className={inputClass} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
-        </Field>
-        <Field label="Description">
-          <textarea
-            className={inputClass}
-            rows={2}
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-        </Field>
-        <Field label="Audio file URL (.mp3)">
-          <input className={inputClass} value={form.audioUrl} onChange={(e) => setForm({ ...form, audioUrl: e.target.value })} />
-        </Field>
-        <div className="grid grid-cols-3 gap-3">
-          <Field label="Speaker">
-            <input className={inputClass} value={form.speaker} onChange={(e) => setForm({ ...form, speaker: e.target.value })} required />
-          </Field>
-          <Field label="Duration">
-            <input
-              placeholder="24:10"
-              className={inputClass}
-              value={form.duration}
-              onChange={(e) => setForm({ ...form, duration: e.target.value })}
-            />
-          </Field>
-          <Field label="Date">
-            <input type="date" className={inputClass} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-          </Field>
-        </div>
-        <SubmitButton loading={loading} label={existing ? 'Save Changes' : 'Add Talk'} />
       </form>
     </Modal>
   );

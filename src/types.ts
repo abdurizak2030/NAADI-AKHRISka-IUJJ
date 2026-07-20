@@ -83,17 +83,6 @@ export interface VideoItem {
   createdAt: string;
 }
 
-export interface TalkItem {
-  id: string;
-  title: string;
-  description: string;
-  audioUrl?: string;
-  speaker: string;
-  duration: string;
-  date: string;
-  createdAt: string;
-}
-
 export interface RoadmapNode {
   id: string;
   step: number;

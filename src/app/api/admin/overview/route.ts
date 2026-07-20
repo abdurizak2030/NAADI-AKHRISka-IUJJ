@@ -4,7 +4,7 @@ import { requireAdmin } from '@/lib/server/auth';
 import { countUsers } from '@/lib/server/repositories/user.repository';
 import { listArticles } from '@/lib/server/repositories/articles.repository';
 import { listEvents } from '@/lib/server/repositories/events.repository';
-import { listPdfs, listVideos, listGallery, listTalks } from '@/lib/server/repositories/media.repository';
+import { listPdfs, listVideos, listGallery } from '@/lib/server/repositories/media.repository';
 
 export async function GET(request: NextRequest) {
   const notReady = await requireDbReady();
@@ -13,14 +13,13 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const [users, articles, events, pdfs, videos, gallery, talks] = await Promise.all([
+    const [users, articles, events, pdfs, videos, gallery] = await Promise.all([
       countUsers(),
       listArticles(false),
       listEvents(),
       listPdfs(),
       listVideos(),
       listGallery(),
-      listTalks(),
     ]);
 
     const now = new Date();
@@ -35,7 +34,6 @@ export async function GET(request: NextRequest) {
         draftArticles: articles.length - publishedArticles,
         pdfs: pdfs.length,
         videos: videos.length,
-        talks: talks.length,
         gallery: gallery.length,
         events: events.length,
         upcomingEvents,

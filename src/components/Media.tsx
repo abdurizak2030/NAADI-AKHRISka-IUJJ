@@ -7,19 +7,15 @@
 
 import React, { useState } from 'react';
 import { mediaUrl } from '../lib/api';
-import { Play, Video, Disc, Clock, User, Calendar, Radio, X, Images, ZoomIn } from 'lucide-react';
-import { VideoItem, TalkItem, GalleryItem } from '../types';
+import { Play, Video, User, Radio, X, Images, ZoomIn } from 'lucide-react';
+import { VideoItem, GalleryItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import VideoPlayer from './VideoPlayer';
-import AudioPlayer from './AudioPlayer';
 import { useLanguage } from '../i18n/LanguageContext';
 
 interface MediaProps {
   videos: VideoItem[];
-  talks: TalkItem[];
   gallery: GalleryItem[];
-  token: string | null;
-  onLoginPrompt: () => void;
 }
 
 const fadeUp = {
@@ -27,27 +23,14 @@ const fadeUp = {
   visible: { opacity: 1, y: 0 },
 };
 
-export default function Media({ videos, talks, gallery, token, onLoginPrompt }: MediaProps) {
-  const [activeMediaTab, setActiveMediaTab] = useState<'videos' | 'talks' | 'gallery'>('videos');
-  const [activeTalk, setActiveTalk] = useState<TalkItem | null>(null);
+export default function Media({ videos, gallery }: MediaProps) {
+  const [activeMediaTab, setActiveMediaTab] = useState<'videos' | 'gallery'>('videos');
   const [openVideo, setOpenVideo] = useState<VideoItem | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<GalleryItem | null>(null);
   const { t } = useLanguage();
 
   const handleOpenVideo = (video: VideoItem) => {
-    if (!token) {
-      onLoginPrompt();
-      return;
-    }
     setOpenVideo(video);
-  };
-
-  const handlePlayTalk = (talk: TalkItem) => {
-    if (!token) {
-      onLoginPrompt();
-      return;
-    }
-    setActiveTalk(talk);
   };
 
   return (
@@ -87,18 +70,6 @@ export default function Media({ videos, talks, gallery, token, onLoginPrompt }: 
           >
             <Video className="w-4 h-4" />
             <span>{t('media.tabVideos')}</span>
-          </button>
-          <button
-            id="tab-talks"
-            onClick={() => setActiveMediaTab('talks')}
-            className={`flex items-center gap-2 px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-              activeMediaTab === 'talks'
-                ? 'bg-emerald-900 text-amber-300 shadow-sm'
-                : 'text-emerald-950 hover:bg-emerald-100/50'
-            }`}
-          >
-            <Disc className="w-4 h-4" />
-            <span>{t('media.tabTalks')}</span>
           </button>
           <button
             id="tab-gallery"
@@ -183,88 +154,6 @@ export default function Media({ videos, talks, gallery, token, onLoginPrompt }: 
                 </motion.div>
               ))
             )}
-          </motion.div>
-        )}
-
-        {activeMediaTab === 'talks' && (
-          /* TALKS PODCAST SECTION */
-          <motion.div
-            key="talks"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.25 }}
-            className="space-y-6"
-            id="talks-section"
-          >
-            {/* Real audio player */}
-            <AnimatePresence>
-              {activeTalk && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                >
-                  <AudioPlayer talk={activeTalk} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* List of Podcasts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" id="talks-list">
-              {talks.length === 0 ? (
-                <div className="col-span-full text-center py-16 bg-gray-50 rounded-3xl border border-dashed border-gray-200 text-gray-550 font-sans text-sm">
-                  {t('media.noTalks')}
-                </div>
-              ) : (
-                talks.map((talk, idx) => (
-                  <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.35, delay: idx * 0.05 }}
-                    key={talk.id}
-                    id={`talk-card-${talk.id}`}
-                    className={`bg-white rounded-2xl p-5 border flex items-center justify-between gap-4 transition-all duration-300 ${
-                      activeTalk?.id === talk.id
-                        ? 'border-emerald-800 ring-2 ring-emerald-800/10 bg-emerald-50/10 shadow-sm'
-                        : 'border-gray-150/70 hover:border-emerald-800/20 hover:bg-emerald-50/5 shadow-sm'
-                    }`}
-                  >
-                    <div className="flex items-start space-x-4 flex-grow truncate">
-                      <button
-                        id={`btn-play-talk-${talk.id}`}
-                        onClick={() => handlePlayTalk(talk)}
-                        className="w-12 h-12 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 flex items-center justify-center flex-shrink-0 transition-all cursor-pointer shadow-inner hover:scale-105 active:scale-95"
-                      >
-                        <Play className="w-5 h-5 fill-emerald-900 ml-0.5" />
-                      </button>
-                      <div className="truncate space-y-1">
-                        <h4 className="text-sm sm:text-base font-bold text-emerald-950 font-sans truncate tracking-tight">{talk.title}</h4>
-                        <p className="text-gray-500 text-xs sm:text-sm truncate leading-relaxed">{talk.description}</p>
-
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] sm:text-xs text-gray-400 font-semibold pt-1 font-sans">
-                          <span className="flex items-center gap-1.5">
-                            <User className="w-3.5 h-3.5 text-amber-500" />
-                            <span className="text-emerald-900 font-bold">{talk.speaker}</span>
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 text-amber-500" />
-                            <span>{talk.duration}</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="text-right flex-shrink-0 text-[10px] text-gray-400 font-mono hidden sm:block font-semibold">
-                      <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1.5 rounded-lg border">
-                        <Calendar className="w-3.5 h-3.5 text-emerald-850" />
-                        <span>{talk.date}</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </div>
           </motion.div>
         )}
 

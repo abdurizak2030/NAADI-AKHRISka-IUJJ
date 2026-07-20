@@ -102,7 +102,7 @@ export default function Contact() {
               </div>
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-amber-400">{t('contact.phoneLabel')}</p>
-                <p className="text-sm text-emerald-100 mt-1">+251 915 744 321</p>
+                <p className="text-sm text-emerald-100 mt-1">+251 902 817 476</p>
               </div>
             </div>
           </div>

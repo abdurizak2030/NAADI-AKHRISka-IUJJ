@@ -109,6 +109,15 @@ export default function VideoPlayer({ videoUrl, youtubeId, title, posterUrl, aut
     return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
   }, []);
 
+  useEffect(() => {
+    if (autoPlay && videoRef.current) {
+      videoRef.current.muted = true;
+      videoRef.current.play().catch((err) => {
+        console.warn('Video autoplay failed:', err);
+      });
+    }
+  }, [autoPlay]);
+
   // ------------------------------------------------------------------
   // YouTube embed path — native player already covers every requirement.
   // ------------------------------------------------------------------
