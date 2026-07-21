@@ -1758,7 +1758,7 @@ function CommunityTab({
                 <div className="flex items-center gap-3 mb-3">
                   <img
                     loading="lazy"
-                    src={mediaUrl(tItem.avatarUrl) || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBlnBaNdt9jJ4GBDAvze8FWARe-A6bXrNEtv8ZCnyn-w&s=10'}
+                    src={mediaUrl(tItem.avatarUrl) || 'logoIUJJ.jpg'}
                     alt={tItem.name}
                     className="w-11 h-11 rounded-full object-cover border border-amber-500/30"
                   />
@@ -1878,7 +1878,7 @@ function StarOfMonthForm({
           <div className="flex items-center gap-3 flex-wrap">
             <img
               loading="lazy"
-              src={mediaUrl(form.avatarUrl) || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBlnBaNdt9jJ4GBDAvze8FWARe-A6bXrNEtv8ZCnyn-w&s=10'}
+              src={mediaUrl(form.avatarUrl) || 'logoIUJJ.jpg'}
               alt="Preview"
               className="w-16 h-16 rounded-full object-cover border border-amber-500/30"
             />

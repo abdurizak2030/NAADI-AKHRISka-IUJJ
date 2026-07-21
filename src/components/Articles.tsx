@@ -312,7 +312,7 @@ export default function Articles({
                   ) : (
                     comments.map((comm) => (
                       <div key={comm.id} className="flex gap-4 bg-gray-50/50 rounded-2xl p-4 sm:p-5 border border-gray-100/85" id={`comment-item-${comm.id}`}>
-                        <img loading="lazy"                           src={mediaUrl(comm.avatarUrl) || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBlnBaNdt9jJ4GBDAvze8FWARe-A6bXrNEtv8ZCnyn-w&s=10'}
+                        <img loading="lazy"                           src={mediaUrl(comm.avatarUrl) || 'logoIUJJ.jpg'}
                           alt={comm.authorName}
                           className="w-9 h-9 rounded-full border border-amber-400 object-cover shrink-0"
                         />

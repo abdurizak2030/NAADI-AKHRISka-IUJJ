@@ -183,7 +183,7 @@ export default function Navbar({ user, currentTab, setTab, onLogout }: NavbarPro
                   }`}
                 >
                   <img
-                    src={mediaUrl(user.avatarUrl) || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBlnBaNdt9jJ4GBDAvze8FWARe-A6bXrNEtv8ZCnyn-w&s=10'}
+                    src={mediaUrl(user.avatarUrl) || 'logoIUJJ.jpg'}
                     alt={user.name}
                     className="w-5 h-5 rounded-full border border-amber-400"
                   />

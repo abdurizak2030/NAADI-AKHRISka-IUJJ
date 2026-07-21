@@ -126,7 +126,7 @@ export default function Media({ videos, gallery }: MediaProps) {
                         className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-80 transition-opacity duration-300"
                       />
                     ) : (
-                      <div className="absolute inset-0 bg-cover bg-center opacity-40 filter blur-[2px] bg-[url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBlnBaNdt9jJ4GBDAvze8FWARe-A6bXrNEtv8ZCnyn-w&s=10')]" />
+                      <div className="absolute inset-0 bg-cover bg-center opacity-40 filter blur-[2px] bg-[url('logoIUJJ.jpg')]" />
                     )}
 
                     <div className="relative z-10 w-16 h-16 rounded-full bg-amber-500 group-hover:bg-amber-400 text-emerald-950 flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform border border-amber-300/40">

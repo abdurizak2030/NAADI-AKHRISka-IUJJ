@@ -17,6 +17,7 @@ import {
   NotificationItem,
   Role,
   RoadmapNode,
+  RoadmapProgress,
   Testimonial,
 } from '../types';
 
@@ -70,6 +71,61 @@ export async function deleteRoadmapNode(id: string): Promise<RoadmapNode | null>
   return toRoadmap(rows[0]);
 }
 
+interface RoadmapProgressRow {
+  start_date: string | Date;
+  end_date: string | Date;
+}
+
+function toDateOnly(v: string | Date): string {
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  return v.slice(0, 10);
+}
+
+function daysBetween(start: Date, end: Date): number {
+  return Math.ceil((end.getTime() - start.getTime()) / 86400000);
+}
+
+function toUtcDate(value: string): Date {
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+function toRoadmapProgress(row: RoadmapProgressRow): RoadmapProgress {
+  const startDate = toDateOnly(row.start_date);
+  const endDate = toDateOnly(row.end_date);
+  const start = toUtcDate(startDate);
+  const end = toUtcDate(endDate);
+  const today = toUtcDate(new Date().toISOString().slice(0, 10));
+  const totalDays = Math.max(daysBetween(start, end), 1);
+  const elapsedDays = Math.min(Math.max(daysBetween(start, today), 0), totalDays);
+  const remainingDays = Math.max(daysBetween(today, end), 0);
+  const completionPercentage = Math.min(Math.max(Math.round((elapsedDays / totalDays) * 100), 0), 100);
+
+  return { startDate, endDate, completionPercentage, remainingDays, elapsedDays, totalDays };
+}
+
+export async function getRoadmapProgress(): Promise<RoadmapProgress> {
+  const pool = getPool();
+  await pool.query(
+    `INSERT INTO roadmap_progress (id, start_date, end_date)
+     VALUES (1, DATE '2025-11-09', DATE '2026-11-09')
+     ON CONFLICT (id) DO NOTHING`
+  );
+  const { rows } = await pool.query<RoadmapProgressRow>('SELECT start_date, end_date FROM roadmap_progress WHERE id = 1');
+  return toRoadmapProgress(rows[0]);
+}
+
+export async function updateRoadmapProgress(updates: { startDate?: string; endDate?: string }): Promise<RoadmapProgress> {
+  const { rows } = await getPool().query<RoadmapProgressRow>(
+    `UPDATE roadmap_progress SET
+       start_date = COALESCE($1::date, start_date),
+       end_date = COALESCE($2::date, end_date),
+       updated_at = now()
+     WHERE id = 1 RETURNING start_date, end_date`,
+    [updates.startDate || null, updates.endDate || null]
+  );
+  if (rows.length > 0) return toRoadmapProgress(rows[0]);
+  return getRoadmapProgress();
+}
 // ------------------------------ Chat ------------------------------------
 
 interface ChatRow {
@@ -242,7 +298,7 @@ interface SettingsRow {
   x_url: string | null;
 }
 
-function toSettings(row: SettingsRow): ClubSettings {
+function toSettings(row: SettingsRow, articlePublishingEnabled = true): ClubSettings {
   return {
     clubName: row.club_name,
     clubArabicName: row.club_arabic_name,
@@ -255,13 +311,29 @@ function toSettings(row: SettingsRow): ClubSettings {
     tiktokUrl: row.tiktok_url ?? undefined,
     facebookUrl: row.facebook_url ?? undefined,
     xUrl: row.x_url ?? undefined,
+    articlePublishingEnabled,
   };
 }
 
+export async function getArticleSettings(): Promise<{ articlePublishingEnabled: boolean }> {
+  const pool = getPool();
+  await pool.query(
+    `INSERT INTO article_settings (id, publishing_enabled)
+     VALUES (1, true)
+     ON CONFLICT (id) DO NOTHING`
+  );
+  const { rows } = await pool.query<{ publishing_enabled: boolean }>('SELECT publishing_enabled FROM article_settings WHERE id = 1');
+  return { articlePublishingEnabled: rows[0]?.publishing_enabled ?? true };
+}
+
 export async function getSettings(): Promise<ClubSettings | null> {
-  const { rows } = await getPool().query<SettingsRow>('SELECT * FROM club_settings WHERE id = 1');
+  const pool = getPool();
+  const [{ rows }, articleSettings] = await Promise.all([
+    pool.query<SettingsRow>('SELECT * FROM club_settings WHERE id = 1'),
+    getArticleSettings(),
+  ]);
   if (rows.length === 0) return null;
-  return toSettings(rows[0]);
+  return toSettings(rows[0], articleSettings.articlePublishingEnabled);
 }
 
 export async function updateSettings(updates: Partial<ClubSettings>): Promise<ClubSettings> {
@@ -288,9 +360,20 @@ export async function updateSettings(updates: Partial<ClubSettings>): Promise<Cl
       updates.xUrl ?? null,
     ]
   );
-  return toSettings(rows[0]);
-}
 
+  let articlePublishingEnabled = (await getArticleSettings()).articlePublishingEnabled;
+  if (typeof updates.articlePublishingEnabled === 'boolean') {
+    await getPool().query(
+      `INSERT INTO article_settings (id, publishing_enabled)
+       VALUES (1, $1)
+       ON CONFLICT (id) DO UPDATE SET publishing_enabled = EXCLUDED.publishing_enabled, updated_at = now()`,
+      [updates.articlePublishingEnabled]
+    );
+    articlePublishingEnabled = updates.articlePublishingEnabled;
+  }
+
+  return toSettings(rows[0], articlePublishingEnabled);
+}
 interface FounderRow {
   name: string;
   title: string;

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     let finalAuthorName = authorName || 'Guest Scholar';
     let finalAuthorId = 'guest';
-    let finalAvatarUrl = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBlnBaNdt9jJ4GBDAvze8FWARe-A6bXrNEtv8ZCnyn-w&s=10';
+    let finalAvatarUrl = 'logoIUJJ.jpg';
 
     // Optional auth: signed-in commenters get their real name/avatar, but
     // guests may still comment (no 401 here) — mirrors the original route.

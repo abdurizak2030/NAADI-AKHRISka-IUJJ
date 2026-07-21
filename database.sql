@@ -31,10 +31,10 @@ CREATE TABLE IF NOT EXISTS articles (
   id             TEXT PRIMARY KEY DEFAULT ('art_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
   title          TEXT NOT NULL,
   content        TEXT NOT NULL,
-  summary        TEXT NOT NULL,
+  summary        TEXT,
   author_id      TEXT REFERENCES users(id) ON DELETE SET NULL,
   author_name    TEXT NOT NULL,
-  category       TEXT NOT NULL DEFAULT 'General',
+  category       TEXT DEFAULT '',
   language       TEXT NOT NULL DEFAULT 'Somali' CHECK (language IN ('Somali', 'Arabic', 'English')),
   status         TEXT NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT', 'PENDING', 'PUBLISHED')),
   published_at   TIMESTAMPTZ,
@@ -46,8 +46,25 @@ CREATE TABLE IF NOT EXISTS articles (
 );
 
 ALTER TABLE articles ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE articles ALTER COLUMN summary DROP NOT NULL;
+ALTER TABLE articles ALTER COLUMN category DROP NOT NULL;
+ALTER TABLE articles ALTER COLUMN category SET DEFAULT '';
+UPDATE articles SET category = '' WHERE category IS NULL;
 CREATE INDEX IF NOT EXISTS articles_status_idx ON articles (status);
 CREATE INDEX IF NOT EXISTS articles_created_idx ON articles (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS article_images (
+  id          TEXT PRIMARY KEY DEFAULT ('img_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
+  article_id  TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+  image_url   TEXT NOT NULL,
+  alt_text    TEXT NOT NULL DEFAULT '',
+  is_featured BOOLEAN NOT NULL DEFAULT true,
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS article_images_featured_unique_idx ON article_images (article_id) WHERE is_featured;
+CREATE INDEX IF NOT EXISTS article_images_article_idx ON article_images (article_id, sort_order ASC);
 
 CREATE TABLE IF NOT EXISTS comments (
   id          TEXT PRIMARY KEY DEFAULT ('c_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
@@ -60,6 +77,15 @@ CREATE TABLE IF NOT EXISTS comments (
 );
 
 CREATE INDEX IF NOT EXISTS comments_article_idx ON comments (article_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS likes (
+  article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+  user_key   TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (article_id, user_key)
+);
+
+CREATE INDEX IF NOT EXISTS likes_article_idx ON likes (article_id);
 
 CREATE TABLE IF NOT EXISTS pdfs (
   id           TEXT PRIMARY KEY DEFAULT ('pdf_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
@@ -149,6 +175,13 @@ CREATE TABLE IF NOT EXISTS roadmap (
   quarter     TEXT NOT NULL DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS roadmap_progress (
+  id         INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  start_date DATE NOT NULL DEFAULT DATE '2025-11-09',
+  end_date   DATE NOT NULL DEFAULT DATE '2026-11-09',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS chat_messages (
   id                TEXT PRIMARY KEY DEFAULT ('msg_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
   user_id           TEXT REFERENCES users(id) ON DELETE SET NULL,
@@ -209,6 +242,12 @@ ALTER TABLE club_settings ADD COLUMN IF NOT EXISTS whatsapp_channel_url TEXT;
 ALTER TABLE club_settings ADD COLUMN IF NOT EXISTS tiktok_url TEXT;
 ALTER TABLE club_settings ADD COLUMN IF NOT EXISTS facebook_url TEXT;
 ALTER TABLE club_settings ADD COLUMN IF NOT EXISTS x_url TEXT;
+
+CREATE TABLE IF NOT EXISTS article_settings (
+  id                 INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  publishing_enabled BOOLEAN NOT NULL DEFAULT true,
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 CREATE TABLE IF NOT EXISTS founder_info (
   id        INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
@@ -271,6 +310,14 @@ VALUES (
   '',
   ''
 )
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO article_settings (id, publishing_enabled)
+VALUES (1, true)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO roadmap_progress (id, start_date, end_date)
+VALUES (1, DATE '2025-11-09', DATE '2026-11-09')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO founder_info (id, name, title, bio, image_url, message)

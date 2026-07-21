@@ -3,7 +3,7 @@ import { requireDbReady, handleError, safeJsonBody } from '@/lib/server/route-he
 import { requireAuth } from '@/lib/server/auth';
 import { deleteArticle, getArticleById, updateArticle } from '@/lib/server/repositories/articles.repository';
 import { addAuditLog } from '@/lib/server/repositories/audit.repository';
-import { createNotification } from '@/lib/server/repositories/content.repository';
+import { createNotification, getArticleSettings } from '@/lib/server/repositories/content.repository';
 import { listUsers } from '@/lib/server/repositories/user.repository';
 
 async function notifyAdminsOfPendingArticle(articleTitle: string, authorName: string) {
@@ -42,22 +42,32 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await safeJsonBody(request);
+    const hasOwn = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
     const title = typeof body?.title === 'string' ? body.title.trim() : undefined;
     const content = typeof body?.content === 'string' ? body.content.trim() : undefined;
-    const summary = typeof body?.summary === 'string' ? body.summary.trim() : undefined;
-    const category = typeof body?.category === 'string' ? body.category.trim() : undefined;
+    const summary = hasOwn('summary') ? (typeof body?.summary === 'string' ? body.summary.trim() || null : null) : undefined;
+    const category = hasOwn('category') ? (typeof body?.category === 'string' ? body.category.trim() : '') : undefined;
     const language = ['Somali', 'Arabic', 'English'].includes(body?.language) ? body.language : undefined;
     const requestedStatus = body?.status === 'PUBLISHED' ? 'PUBLISHED' : body?.status === 'PENDING' ? 'PENDING' : body?.status === 'DRAFT' ? 'DRAFT' : undefined;
-    const imageUrl = typeof body?.imageUrl === 'string' && body.imageUrl.trim() ? body.imageUrl.trim() : undefined;
+    const imageUrl = hasOwn('imageUrl')
+      ? typeof body?.imageUrl === 'string'
+        ? body.imageUrl.trim() || null
+        : null
+      : undefined;
 
     if (title !== undefined && title.length > 140) {
       return NextResponse.json({ error: 'Titlka wuu ka dheeraaday xadka ugu badan.' }, { status: 400 });
     }
-    if (summary !== undefined && summary.length > 220) {
+    if (summary !== undefined && summary !== null && summary.length > 220) {
       return NextResponse.json({ error: 'Koorsada wuu ka dheeraaday xadka ugu badan.' }, { status: 400 });
     }
     if (content !== undefined && content.length > 20000) {
       return NextResponse.json({ error: 'Qormada wuu ka dheeraaday xadka ugu badan.' }, { status: 400 });
+    }
+
+    const articleSettings = await getArticleSettings();
+    if (!articleSettings.articlePublishingEnabled && requestedStatus && requestedStatus !== 'DRAFT') {
+      return NextResponse.json({ error: 'Article publishing is currently disabled by an administrator.' }, { status: 403 });
     }
 
     if (payload.role !== 'ADMIN' && requestedStatus === 'PUBLISHED') {
@@ -68,7 +78,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const nextStatus =
       payload.role === 'ADMIN'
         ? requestedStatus
-        : requestedStatus ?? (existing.status === 'PUBLISHED' && hasContentEdit ? 'PENDING' : undefined);
+        : requestedStatus ?? (existing.status === 'PUBLISHED' && hasContentEdit && articleSettings.articlePublishingEnabled ? 'PENDING' : undefined);
 
     const article = await updateArticle(id, { title, content, summary, category, language, status: nextStatus, imageUrl });
     if (!article) return NextResponse.json({ error: 'Maqaalka lama helin.' }, { status: 404 });

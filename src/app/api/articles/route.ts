@@ -3,14 +3,15 @@ import { requireDbReady, handleError, safeJsonBody } from '@/lib/server/route-he
 import { getAuthPayload, requireAuth } from '@/lib/server/auth';
 import { createArticle, listArticles } from '@/lib/server/repositories/articles.repository';
 import { addAuditLog } from '@/lib/server/repositories/audit.repository';
-import { createNotification } from '@/lib/server/repositories/content.repository';
+import { createNotification, getArticleSettings } from '@/lib/server/repositories/content.repository';
 import { listUsers } from '@/lib/server/repositories/user.repository';
+import { getArticleLikeUserKey } from '@/lib/server/utils/article-like';
 
 function sanitizeArticlePayload(body: Record<string, unknown>) {
   const title = typeof body.title === 'string' ? body.title.trim() : '';
   const content = typeof body.content === 'string' ? body.content.trim() : '';
   const summary = typeof body.summary === 'string' ? body.summary.trim() : '';
-  const category = typeof body.category === 'string' ? body.category.trim() : 'General';
+  const category = typeof body.category === 'string' ? body.category.trim() : '';
   const language =
     typeof body.language === 'string' && ['Somali', 'Arabic', 'English'].includes(body.language) ? body.language : 'Somali';
   const status = body.status === 'PUBLISHED' ? 'PUBLISHED' : body.status === 'PENDING' ? 'PENDING' : 'DRAFT';
@@ -41,13 +42,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const auth = getAuthPayload(request);
+    const likeUserKey = getArticleLikeUserKey(request, auth);
     const publishedOnly = request.nextUrl.searchParams.get('status') === 'PUBLISHED';
 
     if (publishedOnly || !auth) {
-      return NextResponse.json(await listArticles(true));
+      return NextResponse.json(await listArticles(true, likeUserKey));
     }
 
-    const articles = await listArticles(false);
+    const articles = await listArticles(false, likeUserKey);
     if (auth.role === 'ADMIN') {
       return NextResponse.json(articles);
     }
@@ -72,12 +74,17 @@ export async function POST(request: NextRequest) {
     const body = await safeJsonBody(request);
     const { title, content, summary, category, language, status, imageUrl } = sanitizeArticlePayload(body);
 
-    if (!title || !content || !summary) {
-      return NextResponse.json({ error: 'Fadlan buux dhammaan meelaha loo baahan yahay.' }, { status: 400 });
+    if (!title || !content) {
+      return NextResponse.json({ error: 'Fadlan buuxi cinwaanka iyo qormada.' }, { status: 400 });
     }
 
     if (title.length > 140 || summary.length > 220 || content.length > 20000) {
       return NextResponse.json({ error: 'Titlka, koorsada, ama qormaanku way dhaafayaan xadka ugu badan.' }, { status: 400 });
+    }
+
+    const articleSettings = await getArticleSettings();
+    if (!articleSettings.articlePublishingEnabled && status !== 'DRAFT') {
+      return NextResponse.json({ error: 'Article publishing is currently disabled by an administrator.' }, { status: 403 });
     }
 
     if (payload.role !== 'ADMIN' && status === 'PUBLISHED') {
@@ -88,7 +95,7 @@ export async function POST(request: NextRequest) {
     const article = await createArticle({
       title,
       content,
-      summary,
+      summary: summary || null,
       category,
       language,
       status: articleStatus,

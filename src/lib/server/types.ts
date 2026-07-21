@@ -103,6 +103,15 @@ export interface RoadmapNode {
   quarter: string;
 }
 
+export interface RoadmapProgress {
+  startDate: string;
+  endDate: string;
+  completionPercentage: number;
+  remainingDays: number;
+  elapsedDays: number;
+  totalDays: number;
+}
+
 export interface ChatMessage {
   id: string;
   userId: string;
