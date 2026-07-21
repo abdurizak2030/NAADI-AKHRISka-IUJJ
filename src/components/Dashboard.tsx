@@ -359,7 +359,7 @@ export default function Dashboard({
         
         {/* Profile brief summary */}
         <div className="p-4 border-b border-gray-100 text-center space-y-3 mb-4">
-          <img loading="lazy"             src={mediaUrl(user?.avatarUrl) || 'logoIUJJ.jpg'}
+          <img loading="lazy"             src={mediaUrl(user?.avatarUrl) || '/logoIUJJ.jpg'}
             alt={user?.name}
             className="w-16 h-16 rounded-full mx-auto border-2 border-amber-400 object-cover shadow-sm shrink-0"
           />
@@ -430,7 +430,7 @@ export default function Dashboard({
                 {/* Profile Picture Upload */}
                 <div className="flex items-center gap-4" id="form-profile-picture">
                   <div className="relative shrink-0">
-                    <img loading="lazy"                       src={mediaUrl(editAvatarUrl) || 'logoIUJJ.jpg'}
+                    <img loading="lazy"                       src={mediaUrl(editAvatarUrl) || '/logoIUJJ.jpg'}
                       alt={user?.name}
                       className="w-20 h-20 rounded-full object-cover border-2 border-amber-400 shadow-sm"
                     />
@@ -823,7 +823,7 @@ export default function Dashboard({
                 ) : (
                   chatMessages.map((msg) => (
                     <div key={msg.id} className="flex items-start gap-3 max-w-[85%]" id={`chat-msg-${msg.id}`}>
-                      <img loading="lazy"                         src={mediaUrl(msg.avatarUrl) || 'logoIUJJ.jpg'}
+                      <img loading="lazy"                         src={mediaUrl(msg.avatarUrl) || '/logoIUJJ.jpg'}
                         alt={msg.userName}
                         className="w-8 h-8 rounded-full border border-amber-400 object-cover shrink-0 mt-0.5"
                       />

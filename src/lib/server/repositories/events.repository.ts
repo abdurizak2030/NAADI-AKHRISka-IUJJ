@@ -80,7 +80,7 @@ export async function createEvent(input: Partial<ClubEvent>): Promise<ClubEvent>
       input.time,
       input.speaker || null,
       input.image ||
-        'logoIUJJ.jpg',
+        '/logoIUJJ.jpg',
       normalizeVisibility(input.visibility),
     ]
   );

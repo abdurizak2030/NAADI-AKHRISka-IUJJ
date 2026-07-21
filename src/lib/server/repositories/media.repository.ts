@@ -59,7 +59,7 @@ export async function createPdf(input: Partial<PdfBook>): Promise<PdfBook> {
       input.description || '',
       input.category || 'General Studies',
       input.coverUrl ||
-        'logoIUJJ.jpg',
+        '/logoIUJJ.jpg',
       input.downloadUrl || '#',
       input.pagesCount || 0,
       input.language || 'Somali',

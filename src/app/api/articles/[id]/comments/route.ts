@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     let finalAuthorName = authorName || 'Guest Scholar';
     let finalAuthorId = 'guest';
-    let finalAvatarUrl = 'logoIUJJ.jpg';
+    let finalAvatarUrl = '/logoIUJJ.jpg';
 
     // Optional auth: signed-in commenters get their real name/avatar, but
     // guests may still comment (no 401 here) — mirrors the original route.
