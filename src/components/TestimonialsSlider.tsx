@@ -1,26 +1,32 @@
-'use client';
+﻿'use client';
 
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * A modern testimonials carousel: a large "spotlight" card with a
- * gradient brand background and gold quote mark, plus a row of
- * clickable avatar chips beneath it so people can jump straight to a
- * specific testimonial. Auto-advances, pauses on hover, and supports
- * swipe/drag on touch devices.
+ * Focused testimonial carousel with a dark-green panel, centered quote,
+ * profile details, arrow controls, and thumbnail navigation.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { mediaUrl } from '../lib/api';
 import { ChevronLeft, ChevronRight, Quote, Star } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Testimonial } from '../types';
 
 interface TestimonialsSliderProps {
   testimonials: Testimonial[];
   autoPlayMs?: number;
 }
+
+const AVATAR_FALLBACK = '/logoIUJJ.jpg';
+const STAR_ITEMS = [0, 1, 2, 3, 4];
+
+const slideVariants = {
+  enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 34 : -34 }),
+  center: { opacity: 1, x: 0 },
+  exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -34 : 34 }),
+};
 
 export default function TestimonialsSlider({ testimonials, autoPlayMs = 6000 }: TestimonialsSliderProps) {
   const [index, setIndex] = useState(0);
@@ -51,137 +57,123 @@ export default function TestimonialsSlider({ testimonials, autoPlayMs = 6000 }: 
 
   const active = testimonials[index];
 
-  const slideVariants = {
-    enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 80 : -80, scale: 0.96 }),
-    center: { opacity: 1, x: 0, scale: 1 },
-    exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -80 : 80, scale: 0.96 }),
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
+    <motion.section
+      initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
-      className="relative max-w-4xl mx-auto"
+      transition={{ duration: 0.55, ease: 'easeOut' }}
+      className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[1.75rem] bg-emerald-950 px-5 py-9 text-white shadow-xl ring-1 ring-amber-300/15 sm:px-10 sm:py-12 lg:px-14"
       id="testimonials-slider"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Spotlight card */}
-      <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-900 via-emerald-950 to-emerald-950 shadow-2xl px-6 sm:px-16 py-12 sm:py-16 min-h-[320px] flex items-center">
-        {/* Decorative glow orbs */}
+      <div className="absolute inset-0 opacity-[0.07] bg-[linear-gradient(90deg,rgba(255,255,255,0.72)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.56)_1px,transparent_1px)] bg-[size:40px_40px]" />
+      <div className="absolute inset-x-8 top-0 h-px bg-amber-300/30" />
+
+      <AnimatePresence mode="wait" custom={direction}>
         <motion.div
-          animate={{ scale: [1, 1.15, 1], opacity: [0.12, 0.2, 0.12] }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute -top-16 -right-16 w-64 h-64 bg-amber-500 rounded-full blur-[90px] pointer-events-none"
-        />
-        <motion.div
-          animate={{ scale: [1, 1.1, 1], opacity: [0.08, 0.16, 0.08] }}
-          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          className="absolute -bottom-16 -left-16 w-64 h-64 bg-emerald-500 rounded-full blur-[90px] pointer-events-none"
-        />
-        <div className="absolute inset-0 bg-[radial-gradient(#D4AF37_1px,transparent_1px)] [background-size:22px_22px] opacity-[0.05]" />
+          key={active.id}
+          custom={direction}
+          variants={slideVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.12}
+          onDragEnd={(_, info) => {
+            if (info.offset.x < -60) goNext();
+            else if (info.offset.x > 60) goPrev();
+          }}
+          transition={{ duration: 0.34, ease: 'easeOut' }}
+          className="relative z-10 mx-auto flex max-w-3xl cursor-grab flex-col items-center text-center active:cursor-grabbing"
+          id={`testimonial-slide-${active.id}`}
+        >
+          <Quote className="h-9 w-9 text-amber-300/35" aria-hidden="true" />
 
-        <Quote className="absolute top-8 left-6 sm:left-12 w-12 h-12 text-amber-400/25 pointer-events-none select-none" />
+          <div className="mt-5 flex items-center justify-center gap-1.5" aria-label="Five star testimonial">
+            {STAR_ITEMS.map((star) => (
+              <Star key={star} className="h-4 w-4 fill-amber-300 text-amber-300" />
+            ))}
+          </div>
 
-        <AnimatePresence mode="wait" custom={direction}>
-          <motion.div
-            key={active.id}
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.15}
-            onDragEnd={(_, info) => {
-              if (info.offset.x < -60) goNext();
-              else if (info.offset.x > 60) goPrev();
-            }}
-            transition={{ duration: 0.45, ease: 'easeInOut' }}
-            className="relative z-10 w-full text-center space-y-7 cursor-grab active:cursor-grabbing"
-            id={`testimonial-slide-${active.id}`}
-          >
-            <div className="flex items-center justify-center gap-1">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-              ))}
+          <p className="mt-7 max-w-2xl font-serif text-lg italic leading-8 text-emerald-50 sm:text-xl sm:leading-9">
+            &quot;{active.content}&quot;
+          </p>
+
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <img
+              loading="lazy"
+              src={mediaUrl(active.avatarUrl) || AVATAR_FALLBACK}
+              alt={active.name}
+              className="h-[72px] w-[72px] rounded-full border-2 border-amber-300 object-cover shadow-md shadow-emerald-950/40"
+            />
+            <div>
+              <h4 className="font-display text-base font-extrabold text-white sm:text-lg">{active.name}</h4>
+              <p className="mt-1 text-xs font-bold uppercase text-amber-200/90">
+                {active.role || 'Reading Club Member'}
+              </p>
             </div>
-
-            <p className="text-emerald-50 text-sm sm:text-lg md:text-xl leading-relaxed italic font-serif max-w-2xl mx-auto">
-              &quot;{active.content}&quot;
-            </p>
-
-            <div className="flex flex-col items-center gap-2 pt-2">
-              <div className="w-16 h-16 rounded-full p-0.5 gold-gradient-bg shadow-lg">
-                <img
-                  loading="lazy"
-                  src={mediaUrl(active.avatarUrl) || 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=150'}
-                  alt={active.name}
-                  className="w-full h-full rounded-full object-cover border-2 border-emerald-950"
-                />
-              </div>
-              <div>
-                <h4 className="text-sm sm:text-base font-bold text-white font-display">{active.name}</h4>
-                <p className="text-[11px] sm:text-xs text-amber-300/90 font-semibold uppercase tracking-wide">{active.role}</p>
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
 
       {count > 1 && (
-        <>
+        <div className="relative z-10 mt-8 flex items-center justify-center gap-3 sm:gap-4">
           <button
+            type="button"
             onClick={goPrev}
             aria-label="Previous testimonial"
-            className="hidden sm:flex absolute left-0 sm:-left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-gray-150 shadow-md items-center justify-center text-emerald-900 hover:bg-emerald-900 hover:text-white hover:scale-110 transition-all cursor-pointer"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-amber-100 transition hover:border-amber-300 hover:bg-amber-300 hover:text-emerald-950 focus:outline-none focus:ring-2 focus:ring-amber-300/70"
           >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={goNext}
-            aria-label="Next testimonial"
-            className="hidden sm:flex absolute right-0 sm:-right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-gray-150 shadow-md items-center justify-center text-emerald-900 hover:bg-emerald-900 hover:text-white hover:scale-110 transition-all cursor-pointer"
-          >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
 
-          {/* Clickable avatar chips */}
-          <div className="flex items-center justify-center gap-3 mt-7 flex-wrap px-4">
+          <div className="flex min-w-0 max-w-[22rem] flex-1 sm:flex-none items-center justify-center gap-2 overflow-x-auto px-1 py-1">
             {testimonials.map((tItem, i) => (
               <motion.button
                 key={tItem.id}
+                type="button"
                 onClick={() => goTo(i, i > index ? 1 : -1)}
                 aria-label={`Show testimonial from ${tItem.name}`}
-                whileHover={{ y: -3 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative cursor-pointer"
+                aria-current={i === index ? 'true' : undefined}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                className="relative shrink-0 cursor-pointer rounded-full focus:outline-none focus:ring-2 focus:ring-amber-300/70 focus:ring-offset-2 focus:ring-offset-emerald-950"
               >
                 <img
                   loading="lazy"
-                  src={mediaUrl(tItem.avatarUrl) || 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=150'}
+                  src={mediaUrl(tItem.avatarUrl) || AVATAR_FALLBACK}
                   alt={tItem.name}
                   className={`rounded-full object-cover transition-all duration-300 ${
                     i === index
-                      ? 'w-11 h-11 border-2 border-amber-500 shadow-md'
-                      : 'w-8 h-8 border-2 border-transparent opacity-50 hover:opacity-90'
+                      ? 'h-11 w-11 border-2 border-amber-300 opacity-100'
+                      : 'h-9 w-9 border border-white/15 opacity-55 hover:opacity-95'
                   }`}
                 />
                 {i === index && (
-                  <motion.div
+                  <motion.span
                     layoutId="testimonial-active-ring"
-                    className="absolute -inset-1 rounded-full border-2 border-amber-400/50"
+                    className="absolute -inset-1 rounded-full border border-amber-300/70"
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}
               </motion.button>
             ))}
           </div>
-        </>
+
+          <button
+            type="button"
+            onClick={goNext}
+            aria-label="Next testimonial"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-amber-100 transition hover:border-amber-300 hover:bg-amber-300 hover:text-emerald-950 focus:outline-none focus:ring-2 focus:ring-amber-300/70"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
       )}
-    </motion.div>
+    </motion.section>
   );
 }
+

@@ -1,204 +1,377 @@
-'use client';
+﻿'use client';
 
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { Info, BookOpen, Eye, Target, CalendarDays, Sparkles } from 'lucide-react';
-import { FounderInfo, Testimonial } from '../types';
+import type { ComponentType } from 'react';
+import Image from 'next/image';
+import {
+  BookOpen,
+  CalendarDays,
+  ExternalLink,
+  Eye,
+  Facebook,
+  Globe,
+  GraduationCap,
+  Instagram,
+  Linkedin,
+  Mail,
+  Quote,
+  Sparkles,
+  Target,
+  Twitter,
+  UsersRound,
+} from 'lucide-react';
 import { motion } from 'motion/react';
-import TestimonialsSlider from './TestimonialsSlider';
-import FounderSection from './FounderSection';
+import { mediaUrl } from '../lib/api';
+import { FounderInfo, FounderSocialLink, Testimonial } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
+import TestimonialsSlider from './TestimonialsSlider';
 
 interface AboutProps {
   testimonials: Testimonial[];
   founder?: FounderInfo | null;
 }
 
+const sectionVariant = {
+  hidden: { opacity: 0, y: 18 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: 'easeOut' as const },
+  },
+};
+
+const listVariant = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 },
+  },
+};
+
+const itemVariant = {
+  hidden: { opacity: 0, y: 14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: 'easeOut' as const },
+  },
+};
+
+const SOCIAL_ICONS: Record<FounderSocialLink['platform'], ComponentType<{ className?: string }>> = {
+  facebook: Facebook,
+  twitter: Twitter,
+  linkedin: Linkedin,
+  instagram: Instagram,
+  email: Mail,
+  website: Globe,
+};
+
 export default function About({ testimonials, founder = null }: AboutProps) {
   const { t } = useLanguage();
-  // Animation presets
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.1
-      }
-    }
-  };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { type: 'spring' as const, stiffness: 100, damping: 15 }
-    }
-  };
+  const aboutLabel = t('about.whoWeAre') || t('about.cardAboutTitle');
+  const founderLinks = founder?.socials ?? [];
 
-  const cardVariants = {
-    hidden: { opacity: 0, y: 24 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { type: 'spring' as const, stiffness: 110, damping: 16 }
-    }
-  };
-
-  // The four About cards: title, body copy, and an icon each. Driven
-  // entirely by the i18n system so a language switch updates every card
-  // instantly with no reload.
-  const cards = [
+  const principles = [
     {
-      id: 'about-card',
+      id: 'about-akhris',
       icon: BookOpen,
-      title: t('about.cardAboutTitle'),
-      text: t('about.cardAboutText'),
-      accent: 'emerald' as const,
+      word: 'Akhris.',
+      label: t('about.cardAboutTitle'),
+      body: t('about.cardAboutText'),
     },
     {
-      id: 'vision-card',
+      id: 'about-faham',
       icon: Eye,
-      title: t('about.ourVision'),
-      text: t('about.cardVisionText'),
-      accent: 'amber' as const,
+      word: 'Faham.',
+      label: t('about.ourVision'),
+      body: t('about.cardVisionText'),
     },
     {
-      id: 'mission-card',
+      id: 'about-hormar',
       icon: Target,
-      title: t('about.ourMission'),
-      text: t('about.cardMissionText'),
-      accent: 'emerald' as const,
+      word: 'Hormar.',
+      label: t('about.ourMission'),
+      body: t('about.cardMissionText'),
+    },
+  ];
+
+  const facts = [
+    {
+      icon: CalendarDays,
+      label: t('about.cardFoundedTitle'),
+      value: t('about.cardFoundedDate'),
     },
     {
-      id: 'founded-card',
-      icon: CalendarDays,
-      title: t('about.cardFoundedTitle'),
-      text: t('about.cardFoundedText'),
-      date: t('about.cardFoundedDate'),
-      accent: 'amber' as const,
+      icon: GraduationCap,
+      label: 'Parent University',
+      value: 'Islamic University of Jigjiga',
+    },
+    {
+      icon: UsersRound,
+      label: t('about.luminaries'),
+      value: t('about.heroName'),
     },
   ];
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-      className="space-y-16 pb-16"
-      id="about-section"
-    >
-
-      {/* 1. Header */}
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8 pb-16" id="about-section">
       <motion.section
-        variants={itemVariants}
-        className="text-center max-w-3xl mx-auto space-y-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.18 }}
+        variants={sectionVariant}
+        className="pt-6 sm:pt-8 lg:pt-10"
         id="about-header"
       >
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold uppercase tracking-wider border border-emerald-100">
-          <Info className="w-3.5 h-3.5 text-amber-500" />
-          <span>{t('about.whoWeAre')}</span>
-        </div>
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-emerald-950 font-display tracking-tight">
-          {t('about.clubName')}
-        </h2>
-        <p className="text-emerald-700/80 text-xs sm:text-sm font-serif italic max-w-xl mx-auto">
-          &ldquo;{t('about.officialName')}&rdquo;
-          <br />
-          <span className="text-[11px] font-sans not-italic text-gray-500 mt-1 block">
-            {t('about.tagline')}
-          </span>
-        </p>
-      </motion.section>
-
-      {/* 2. Hero banner image */}
-      <motion.section variants={itemVariants} id="about-hero-banner">
-        <div className="relative h-64 sm:h-80 bg-gray-100 rounded-3xl overflow-hidden shadow-xl group">
-          <img
-            loading="lazy"
-            src="jaamacada.jpg"
-            alt={t('about.heroName')}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/90 via-emerald-950/35 to-transparent flex items-end p-6 sm:p-10">
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/25">
-                {t('about.luminaries')}
-              </span>
-              <p className="text-white text-lg sm:text-2xl font-display font-extrabold tracking-tight pt-2">
-                {t('about.heroName')}
-              </p>
-            </div>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* 3. Four info cards: About Us / Our Vision / Our Mission / Founded Date */}
-      <motion.section
-        variants={containerVariants}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6"
-        id="about-cards"
-      >
-        {cards.map((card) => {
-          const Icon = card.icon;
-          const isAmber = card.accent === 'amber';
-          return (
-            <motion.div
-              key={card.id}
-              variants={cardVariants}
-              whileHover={{ y: -4 }}
-              className={`p-6 sm:p-7 rounded-2xl border space-y-4 shadow-sm transition-colors ${
-                isAmber
-                  ? 'bg-amber-50/45 border-amber-100/60 hover:bg-amber-50'
-                  : 'bg-emerald-50/50 border-emerald-100/60 hover:bg-emerald-50'
-              }`}
-              id={card.id}
-            >
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  isAmber ? 'bg-emerald-900/10' : 'bg-amber-500/10'
-                }`}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="overflow-hidden rounded-[1.5rem] bg-emerald-950 text-white shadow-xl">
+            <div className="relative min-h-[460px] sm:min-h-[540px] lg:min-h-[600px]">
+              <Image
+                src="/jaamacada.jpg"
+                alt={t('about.heroName')}
+                fill
+                priority
+                sizes="(max-width: 1280px) 100vw, 1280px"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-emerald-950 via-emerald-950/45 to-emerald-950/5" />
+              <motion.div
+                variants={itemVariant}
+                className="absolute inset-x-0 bottom-0 px-5 py-7 sm:px-8 sm:py-10 lg:px-12 lg:py-12"
               >
-                <Icon className={`w-5 h-5 ${isAmber ? 'text-emerald-900' : 'text-amber-600'}`} />
-              </div>
-              <h4 className="font-bold text-emerald-950 text-sm uppercase tracking-wider">{card.title}</h4>
-              {card.date && (
-                <p className="text-xl font-extrabold text-emerald-900 font-display tracking-tight">{card.date}</p>
-              )}
-              <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">{card.text}</p>
+                <div className="max-w-3xl">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase text-amber-100 backdrop-blur">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>{aboutLabel}</span>
+                  </div>
+                  <h2 className="mt-5 max-w-3xl font-display text-4xl font-extrabold leading-[1.05] text-white sm:text-5xl lg:text-6xl">
+                    {t('about.clubName')}
+                  </h2>
+                  <p className="mt-5 max-w-2xl text-base leading-8 text-emerald-50/85 sm:text-lg">
+                    {t('about.tagline')}
+                  </p>
+                  <p className="mt-5 max-w-2xl border-l-2 border-amber-400 pl-4 font-serif text-sm italic leading-7 text-amber-100/90">
+                    {t('about.officialName')}
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+
+            <motion.div
+              variants={listVariant}
+              className="grid divide-y divide-white/10 border-t border-white/10 bg-emerald-950/96 sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+              aria-label="About highlights"
+            >
+              {facts.map(({ icon: Icon, label, value }) => (
+                <motion.div key={label} variants={itemVariant} className="flex gap-4 p-5 sm:p-6">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-300/25 bg-white/5 text-amber-300">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase text-emerald-100/55">{label}</p>
+                    <p className="mt-1 text-sm font-extrabold leading-6 text-white">{value}</p>
+                  </div>
+                </motion.div>
+              ))}
             </motion.div>
-          );
-        })}
+          </div>
+        </div>
       </motion.section>
 
-      {/* 4. Founder Section */}
-      <motion.div variants={itemVariants}>
-        <FounderSection founder={founder} />
-      </motion.div>
-
-      {/* 5. Testimonials (Student / Faculty feedback) */}
-      <motion.section variants={itemVariants} className="space-y-8" id="about-testimonials">
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold uppercase tracking-wider border border-emerald-100">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>{t('about.testimonialsBadge')}</span>
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.16 }}
+        variants={sectionVariant}
+        className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 sm:py-16 lg:grid-cols-[0.45fr_1fr] lg:gap-14 lg:px-8"
+        id="about-pillars"
+      >
+        <div className="self-start lg:sticky lg:top-24">
+          <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold uppercase text-amber-700 ring-1 ring-amber-200/70">
+            <BookOpen className="h-3.5 w-3.5" />
+            <span>{t('about.cardAboutTitle')}</span>
           </div>
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-emerald-950 font-display tracking-tight">
-            {t('about.testimonialsTitle')}
+          <h3 className="mt-5 max-w-lg font-display text-4xl font-extrabold leading-[1.08] text-emerald-950 sm:text-5xl">
+            Akhris. Faham. Hormar.
           </h3>
-          <p className="text-gray-500 text-xs sm:text-sm">
-            {t('about.testimonialsSubtitle')}
+          <p className="mt-5 max-w-md text-sm leading-7 text-gray-600 sm:text-base sm:leading-8">
+            {t('about.cardAboutText')}
           </p>
         </div>
 
-        <TestimonialsSlider testimonials={testimonials} />
+        <motion.div
+          variants={listVariant}
+          className="grid border-y border-emerald-900/10 md:grid-cols-3 md:divide-x md:divide-emerald-900/10"
+        >
+          {principles.map(({ id, icon: Icon, word, label, body }) => (
+            <motion.article
+              key={id}
+              variants={itemVariant}
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="border-b border-emerald-900/10 py-7 last:border-b-0 md:border-b-0 md:px-6 lg:px-8"
+              id={id}
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-emerald-900/10 bg-white text-emerald-900 shadow-sm">
+                <Icon className="h-5 w-5" />
+              </div>
+              <p className="mt-6 font-display text-3xl font-extrabold leading-none text-emerald-950">
+                {word}
+              </p>
+              <p className="mt-3 text-xs font-bold uppercase text-amber-600">{label}</p>
+              <p className="mt-4 text-sm leading-7 text-gray-600">{body}</p>
+            </motion.article>
+          ))}
+        </motion.div>
       </motion.section>
 
-    </motion.div>
+      {founder && (
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.16 }}
+          variants={sectionVariant}
+          className="border-y border-emerald-900/10 bg-gray-50 py-14 sm:py-16"
+          id="founder-section"
+        >
+          <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(240px,0.48fr)_1fr] lg:px-8">
+            <div className="relative min-h-[320px] overflow-hidden rounded-xl bg-emerald-900 sm:min-h-[380px]">
+              <img
+                loading="lazy"
+                src={mediaUrl(founder.imageUrl) || '/logo.png'}
+                alt={founder.name}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/88 via-emerald-950/18 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-5">
+                <p className="text-xs font-bold uppercase text-amber-200">{t('founder.badge')}</p>
+                <h3 className="mt-2 font-display text-2xl font-extrabold leading-tight text-white">
+                  {founder.name}
+                </h3>
+                <p className="mt-1 text-sm text-emerald-50/75">
+                  {founder.title || t('founder.positionFallback')}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-center">
+              <div className="max-w-3xl space-y-6">
+                <div>
+                  <p className="text-xs font-bold uppercase text-amber-600">{t('founder.sectionTitle')}</p>
+                  <h3 className="mt-3 font-display text-3xl font-extrabold leading-tight text-emerald-950 sm:text-4xl">
+                    {t('founder.sectionSubtitle')}
+                  </h3>
+                </div>
+
+                {founder.bio && (
+                  <p className="text-sm leading-7 text-gray-600 sm:text-base sm:leading-8">{founder.bio}</p>
+                )}
+
+                {founder.message && (
+                  <div className="border-l-2 border-amber-500 pl-5">
+                    <Quote className="h-5 w-5 text-amber-500" />
+                    <p className="mt-3 font-serif text-sm italic leading-7 text-emerald-900 dark:text-emerald-100/90">
+                      {founder.message}
+                    </p>
+                  </div>
+                )}
+
+                {founderLinks.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="mr-2 text-xs font-bold uppercase text-gray-500">
+                      {t('founder.followLabel')}
+                    </span>
+                    {founderLinks.map((link, i) => {
+                      const Icon = SOCIAL_ICONS[link.platform];
+                      return (
+                        <a
+                          key={`${link.platform}-${i}`}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={link.platform}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-emerald-900/10 bg-white text-emerald-900 transition-colors hover:border-amber-500 hover:bg-amber-400 hover:text-emerald-950"
+                        >
+                          <Icon className="h-4 w-4" />
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.section>
+      )}
+
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.18 }}
+        variants={sectionVariant}
+        className="border-b border-emerald-900/10 bg-white py-12 sm:py-14"
+        id="parent-university-section"
+      >
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[9rem_1fr_auto] lg:items-center lg:px-8">
+          <div className="relative h-28 w-28 overflow-hidden rounded-xl border border-amber-500/35 bg-white p-1">
+            <Image
+              src="/logoIUJJ.jpg"
+              alt="Islamic University of Jigjiga"
+              fill
+              sizes="112px"
+              className="object-cover p-1"
+            />
+          </div>
+
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase text-amber-600">
+              <GraduationCap className="h-4 w-4" />
+              <span>Our Parent University</span>
+            </div>
+            <h3 className="mt-3 font-display text-2xl font-extrabold leading-tight text-emerald-950 sm:text-3xl">
+              Islamic University of Jigjiga
+            </h3>
+            <p className="mt-3 text-sm leading-7 text-gray-600">
+              Jamacadda Islaamiga ee Jigjiga waxaa la aasaasay 2014 si ay u noqoto xarun cilmiyeed oo heer sare ah oo ay ku xirnaadaan ardayda Soomaaliyeed iyo dadka kale ee gobolka. Jaamacaddu waxay bixisaa barnaamijyo kala duwan oo heer jaamacadeed ah, iyadoo u adeegaysa nidaam waxbarasho oo ku dhisan aqoonta iyo akhlaaqda.
+            </p>
+          </div>
+
+          <a
+            href="https://www.iu-jigjiga.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-fit items-center gap-2 rounded-md bg-emerald-900 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-amber-500 hover:text-emerald-950"
+          >
+            Visit Official Website
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </div>
+      </motion.section>
+
+      {testimonials.length > 0 && (
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.12 }}
+          variants={sectionVariant}
+          className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8"
+          id="about-testimonials"
+        >
+          <div className="mx-auto mb-8 max-w-2xl text-center">
+            <p className="text-xs font-bold uppercase text-amber-600">{t('about.testimonialsBadge')}</p>
+            <h3 className="mt-3 font-display text-3xl font-extrabold leading-tight text-emerald-950 sm:text-4xl">
+              {t('about.testimonialsTitle')}
+            </h3>
+            <p className="mt-4 text-sm leading-7 text-gray-600">{t('about.testimonialsSubtitle')}</p>
+          </div>
+          <TestimonialsSlider testimonials={testimonials} />
+        </motion.section>
+      )}
+    </div>
   );
 }

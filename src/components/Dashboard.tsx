@@ -11,6 +11,10 @@ import {
   User,
   MessageSquare,
   Trophy,
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  Circle,
   PlusCircle,
   Send,
   Camera,
@@ -27,6 +31,7 @@ import {
 } from 'lucide-react';
 import { User as UserType, Article, ChatMessage, RoadmapNode } from '../types';
 import ImageCropModal from './ImageCropModal';
+import RoadmapProgressBar from './RoadmapProgressBar';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -37,6 +42,51 @@ interface DashboardProps {
   roadmap: RoadmapNode[];
   onRefreshUser: () => void;
   onRefreshArticles: () => void;
+}
+
+const roadmapStatusStyles = {
+  COMPLETED: {
+    label: '✓ Completed',
+    eyebrow: 'Already read',
+    Icon: CheckCircle2,
+    markerClass: 'border-emerald-700 bg-emerald-700 text-white',
+    cardClass: 'border-emerald-200 bg-emerald-50/45',
+    pillClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  },
+  IN_PROGRESS: {
+    label: '→ Currently Reading',
+    eyebrow: 'In progress now',
+    Icon: ArrowRight,
+    markerClass: 'border-amber-500 bg-amber-400 text-emerald-950 shadow-md shadow-amber-500/25',
+    cardClass: 'border-amber-300 bg-amber-50/70 ring-2 ring-amber-300/40 shadow-md shadow-amber-500/10',
+    pillClass: 'bg-amber-100 text-amber-800 border-amber-200',
+  },
+  LOCKED: {
+    label: '○ Upcoming',
+    eyebrow: 'Waiting to be read',
+    Icon: Circle,
+    markerClass: 'border-gray-200 bg-white text-gray-400',
+    cardClass: 'border-gray-150 bg-white',
+    pillClass: 'bg-gray-100 text-gray-500 border-gray-200',
+  },
+};
+
+function roadmapBook(node: RoadmapNode): { title: string; author: string } {
+  const title = node.title.trim() || `Book ${node.step}`;
+  const author = node.author?.trim();
+  if (author) return { title, author };
+
+  const byMatch = title.match(/^(.*?)\s+by\s+(.+)$/i);
+  if (byMatch) {
+    return { title: byMatch[1].trim() || title, author: byMatch[2].trim() || 'Author to be added' };
+  }
+
+  const dashMatch = title.match(/^(.*?)\s+-\s+(.+)$/);
+  if (dashMatch) {
+    return { title: dashMatch[1].trim() || title, author: dashMatch[2].trim() || 'Author to be added' };
+  }
+
+  return { title, author: 'Author to be added' };
 }
 
 export default function Dashboard({
@@ -88,6 +138,14 @@ export default function Dashboard({
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const myArticles = articles.filter(a => a.authorId === user?.id);
+  const completedRoadmapCount = roadmap.filter((node) => node.status === 'COMPLETED').length;
+  const currentRoadmapCount = roadmap.filter((node) => node.status === 'IN_PROGRESS').length;
+  const upcomingRoadmapCount = roadmap.filter((node) => node.status === 'LOCKED').length;
+  const roadmapStatusSummaries = [
+    { label: '✓ Completed', count: completedRoadmapCount, description: 'Already read', Icon: CheckCircle2, className: 'bg-emerald-50 text-emerald-800 border-emerald-100' },
+    { label: '→ Currently Reading', count: currentRoadmapCount, description: 'Connected to the timeline', Icon: ArrowRight, className: 'bg-amber-50 text-amber-800 border-amber-100' },
+    { label: '○ Upcoming', count: upcomingRoadmapCount, description: 'Waiting to be read', Icon: Circle, className: 'bg-gray-50 text-gray-600 border-gray-150' },
+  ];
 
   // Load chat messages on tab switch
   useEffect(() => {
@@ -192,7 +250,7 @@ export default function Dashboard({
   const handleWriteArticle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
-    if (!artTitle || !artContent || !artSummary) {
+    if (!artTitle || !artContent) {
       setArtError('Please populate all required fields.');
       return;
     }
@@ -610,11 +668,10 @@ export default function Dashboard({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-emerald-955">{t('dashboard.abstract')} *</label>
+                  <label className="text-xs font-bold text-emerald-955">{t('dashboard.abstract')} <span className="font-normal text-gray-400">({t('common.optional')})</span></label>
                   <input
                     type="text"
                     id="art-sum"
-                    required
                     value={artSummary}
                     onChange={(e) => setArtSummary(e.target.value)}
                     placeholder={t('dashboard.abstractPlaceholder')}
@@ -747,58 +804,106 @@ export default function Dashboard({
           {/* C. ACADEMIC ROADMAP VIEW */}
           {/* ========================================== */}
           {activeSubTab === 'roadmap' && (
-            <motion.div 
+            <motion.div
               key="roadmap-pane"
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
-              className="space-y-8" 
+              className="space-y-8"
               id="db-view-roadmap"
             >
-              <div className="space-y-1">
-                <h3 className="text-xl font-bold text-emerald-955 font-sans tracking-tight">Your Academic Progress Timeline</h3>
-                <p className="text-gray-500 text-xs sm:text-sm">Track your milestones and progression as a scholar throughout your journey with the club.</p>
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div className="space-y-2 max-w-2xl">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+                    <BookOpen className="w-3.5 h-3.5 text-amber-500" />
+                    Reading roadmap
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-emerald-950 font-display tracking-tight">Your Academic Progress Timeline</h3>
+                  <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">Follow each book by title and author, from completed readings to the book currently in progress and the upcoming list.</p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 w-full lg:max-w-md">
+                  {roadmapStatusSummaries.map(({ label, count, description, Icon, className }) => (
+                    <div key={label} className={`rounded-2xl border p-3 ${className}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <Icon className="w-4 h-4 shrink-0" />
+                        <span className="text-lg font-extrabold font-display leading-none">{count}</span>
+                      </div>
+                      <p className="mt-2 text-[10px] font-bold leading-tight">{label}</p>
+                      <p className="mt-1 hidden sm:block text-[10px] leading-tight opacity-75">{description}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-6 space-y-4">
-                {/* Visual Roadmap milestones */}
-                <div className="relative border-l-2 border-emerald-900/10 ml-4 pl-6 space-y-8" id="db-roadmap-tracker">
-                  {roadmap.map((node) => {
-                    const isCompleted = node.status === 'COMPLETED';
-                    const isInProgress = node.status === 'IN_PROGRESS';
+              <RoadmapProgressBar />
 
-                    return (
-                      <div key={node.id} className="relative" id={`roadmap-node-${node.id}`}>
-                        {/* Circle marker */}
-                        <div className={`absolute -left-[35px] top-1.5 w-6.5 h-6.5 rounded-full border-2 bg-white flex items-center justify-center ${
-                          isCompleted ? 'border-emerald-800 bg-emerald-50' : isInProgress ? 'border-amber-500 animate-pulse bg-amber-50' : 'border-gray-200'
-                        }`}>
-                          {isCompleted ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-800 stroke-[3]" />
-                          ) : (
-                            <span className="text-[10px] font-mono font-bold text-amber-700">{node.step}</span>
-                          )}
-                        </div>
+              <div className="border-t border-gray-100 pt-6" id="db-roadmap-tracker">
+                {roadmap.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/70 p-8 text-center">
+                    <BookOpen className="mx-auto mb-3 h-8 w-8 text-amber-500" />
+                    <p className="text-sm font-bold text-emerald-950">No roadmap books yet.</p>
+                    <p className="mt-1 text-xs text-gray-500">The reading sequence will appear here once an admin adds books.</p>
+                  </div>
+                ) : (
+                  <div className="relative space-y-4 sm:space-y-5 sm:pl-8">
+                    <div className="absolute left-3 top-4 hidden h-[calc(100%-2rem)] w-px bg-gradient-to-b from-emerald-200 via-amber-200 to-gray-200 sm:block" />
+                    {roadmap.map((node, index) => {
+                      const status = roadmapStatusStyles[node.status];
+                      const StatusIcon = status.Icon;
+                      const book = roadmapBook(node);
 
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="text-sm sm:text-base font-bold text-emerald-955 font-sans">{node.title}</h4>
-                            <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wide ${
-                              isCompleted ? 'bg-emerald-100 text-emerald-800' : isInProgress ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-400'
-                            }`}>
-                              {node.status.replace('_', ' ')}
-                            </span>
+                      return (
+                        <motion.article
+                          key={node.id}
+                          initial={{ opacity: 0, y: 16 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true, amount: 0.3 }}
+                          transition={{ duration: 0.35, delay: Math.min(index * 0.04, 0.2), ease: 'easeOut' }}
+                          whileHover={{ y: -2 }}
+                          aria-current={node.status === 'IN_PROGRESS' ? 'step' : undefined}
+                          className={`relative rounded-2xl border p-4 sm:p-5 transition-all duration-300 ${status.cardClass}`}
+                          id={`roadmap-node-${node.id}`}
+                        >
+                          <div className={`absolute -left-6 top-5 hidden h-7 w-7 items-center justify-center rounded-full border-2 sm:flex ${status.markerClass}`}>
+                            <StatusIcon className="h-3.5 w-3.5" />
                           </div>
-                          <p className="text-xs sm:text-sm text-gray-500 leading-relaxed max-w-2xl">{node.description}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+
+                          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                            <div className="min-w-0 space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-500 border border-white/80">
+                                  Step {node.step}
+                                </span>
+                                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${status.pillClass}`}>
+                                  {status.label}
+                                </span>
+                                {node.quarter && (
+                                  <span className="rounded-full border border-emerald-100 bg-white/70 px-2.5 py-1 text-[10px] font-bold text-emerald-800">
+                                    {node.quarter}
+                                  </span>
+                                )}
+                              </div>
+                              <div>
+                                <h4 className="text-base sm:text-lg font-extrabold text-emerald-950 font-display tracking-tight leading-snug">{book.title}</h4>
+                                <p className="mt-1 text-xs sm:text-sm font-semibold text-amber-700">by {book.author}</p>
+                              </div>
+                              {node.description && (
+                                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed max-w-2xl">{node.description}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 rounded-xl border border-white/70 bg-white/70 px-3 py-2 text-[11px] font-bold text-emerald-900 shrink-0">
+                              <StatusIcon className="h-4 w-4 text-amber-500" />
+                              <span>{status.eyebrow}</span>
+                            </div>
+                          </div>
+                        </motion.article>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
-
           {/* ========================================== */}
           {/* D. COMMUNITY CHAT VIEW */}
           {/* ========================================== */}

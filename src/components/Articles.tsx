@@ -66,9 +66,11 @@ export default function Articles({
         headers
       });
       if (res.ok) {
+        const data = await res.json();
+        // Update the specific article's like count in the articles list
         onRefreshArticles();
         if (activeArticle && activeArticle.id === id) {
-          setActiveArticle({ ...activeArticle, likesCount: activeArticle.likesCount + 1 });
+          setActiveArticle({ ...activeArticle, likesCount: data.likesCount, likedByCurrentUser: data.liked });
         }
       }
     } catch (err) {

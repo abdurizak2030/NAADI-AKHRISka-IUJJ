@@ -101,7 +101,7 @@ export const translations = {
       testimonialsBadge: 'Voices of the Community',
       testimonialsTitle: 'What Our Members Say',
       testimonialsSubtitle: 'Honest reflections from students and faculty on how the club has shaped their reading journey.',
-      whoWeAre: 'Who We Are',
+      whoWeAre: '',
       clubName: 'The IUJ Reading Club',
       officialName: 'نادي القراءة للجامعة الإسلامية في جكجكا',
       tagline: 'The Premier Academic Reading Guild of the Islamic University of Jigjiga.',

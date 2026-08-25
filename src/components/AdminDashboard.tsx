@@ -798,11 +798,31 @@ function ArticleFormModal({
   const [title, setTitle] = useState(existing?.title || '');
   const [summary, setSummary] = useState(existing?.summary || '');
   const [content, setContent] = useState(existing?.content || '');
-  const [category, setCategory] = useState(existing?.category || 'General');
+  const [category, setCategory] = useState(existing?.category || '');
   const [language, setLanguage] = useState(existing?.language || 'Somali');
   const [status, setStatus] = useState(existing?.status || 'DRAFT');
+  const [imageUrl, setImageUrl] = useState(existing?.imageUrl || '');
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API_BASE_URL}/api/uploads/image`, { method: 'POST', headers: authHeaders(token, false), body: formData });
+      const data = await res.json();
+      if (res.ok) setImageUrl(data.url);
+      else setError(data.error || 'Image upload failed.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -811,10 +831,13 @@ function ArticleFormModal({
     try {
       const url = existing ? `${API_BASE_URL}/api/articles/${existing.id}` : `${API_BASE_URL}/api/articles`;
       const method = existing ? 'PUT' : 'POST';
+      const body: Record<string, unknown> = { title, content, category, language, status };
+      if (summary) body.summary = summary;
+      if (imageUrl) body.imageUrl = imageUrl;
       const res = await fetch(url, {
         method,
         headers: authHeaders(token),
-        body: JSON.stringify({ title, summary, content, category, language, status }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -835,15 +858,15 @@ function ArticleFormModal({
         <Field label="Title">
           <input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} required />
         </Field>
-        <Field label="Summary">
-          <textarea className={inputClass} rows={2} value={summary} onChange={(e) => setSummary(e.target.value)} required />
+        <Field label="Short Abstract Summary (optional)">
+          <textarea className={inputClass} rows={2} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Optional — leave empty if not needed" />
         </Field>
         <Field label="Content">
           <textarea className={inputClass} rows={6} value={content} onChange={(e) => setContent(e.target.value)} required />
         </Field>
         <div className="grid grid-cols-3 gap-3">
-          <Field label="Category">
-            <input className={inputClass} value={category} onChange={(e) => setCategory(e.target.value)} />
+          <Field label="Category (optional)">
+            <input className={inputClass} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Optional" />
           </Field>
           <Field label="Language">
             <select className={inputClass} value={language} onChange={(e) => setLanguage(e.target.value as Article['language'])}>
@@ -860,6 +883,39 @@ function ArticleFormModal({
             </select>
           </Field>
         </div>
+        <Field label="Featured Image (optional)">
+          <div className="flex items-center gap-3 flex-wrap">
+            {imageUrl && (
+              <img loading="lazy" src={mediaUrl(imageUrl)} alt="Preview" className="w-16 h-16 rounded-lg object-cover border border-gray-200" />
+            )}
+            <label
+              htmlFor="admin-article-image-input"
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold border cursor-pointer transition-colors ${
+                uploading ? 'bg-gray-100 text-gray-400 border-gray-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+              }`}
+            >
+              {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
+              <span>{uploading ? 'Uploading...' : imageUrl ? 'Replace Image' : 'Upload Featured Image'}</span>
+            </label>
+            <input
+              type="file"
+              id="admin-article-image-input"
+              accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+              className="hidden"
+              onChange={handleImageChange}
+              disabled={uploading}
+            />
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={() => setImageUrl('')}
+                className="text-[11px] font-bold text-red-500 hover:text-red-700 cursor-pointer"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </Field>
         <SubmitButton loading={loading} label={existing ? 'Save Changes' : 'Create Article'} />
       </form>
     </Modal>
@@ -1223,12 +1279,12 @@ function EventFormModal({
             />
           </div>
         </Field>
-        <Field label="Visibility">
-          <select className={inputClass} value={form.visibility} onChange={(e) => setForm({ ...form, visibility: e.target.value as EventVisibility })}>
-            <option value="PUBLIC">Public — visible to everyone</option>
-            <option value="MEMBERS">Members Only — signed-in members only</option>
-          </select>
-        </Field>
+          <Field label="Visibility">
+            <select className={inputClass} value={form.visibility} onChange={(e) => setForm({ ...form, visibility: e.target.value as EventVisibility })}>
+              <option value="PUBLIC">Public — visible to everyone</option>
+              <option value="PRIVATE">Members Only — signed-in members only</option>
+            </select>
+          </Field>
         {existing && (
           <Field label="Status">
             <select className={inputClass} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ClubEvent['status'] })}>
@@ -2211,6 +2267,7 @@ function SettingsTab({
       tiktokUrl: '',
       facebookUrl: '',
       xUrl: '',
+      articlePublishingEnabled: true,
     }
   );
   const [loading, setLoading] = useState(false);
@@ -2225,7 +2282,7 @@ function SettingsTab({
     setLoading(true);
     setSaved(false);
     try {
-      await fetch(`${API_BASE_URL}/api/settings`, { method: 'PUT', headers: authHeaders(token), body: JSON.stringify(form) });
+      await fetch(`${API_BASE_URL}/api/settings`, { method: 'PUT', headers: authHeaders(token), body: JSON.stringify({ ...form, articlePublishingEnabled: form.articlePublishingEnabled }) });
       onChanged();
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -2313,6 +2370,24 @@ function SettingsTab({
             />
           </Field>
         </div>
+        {/* Article Publishing Toggle */}
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-emerald-950 font-sans">Article Publishing</h4>
+              <p className="text-xs text-gray-500 mt-0.5">When disabled, the Publish button is hidden and publishing is blocked on both the frontend and backend.</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.articlePublishingEnabled ?? true}
+                onChange={(e) => setForm({ ...form, articlePublishingEnabled: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-emerald-800 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+            </label>
+          </div>
+        </div>
         <SubmitButton loading={loading} label="Save Settings" />
       </form>
 
@@ -2355,7 +2430,7 @@ function RoadmapEditor({ token }: { token: string }) {
       const res = await fetch(`${API_BASE_URL}/api/roadmap`, {
         method: 'POST',
         headers: authHeaders(token),
-        body: JSON.stringify({ title: 'New Milestone', description: '', status: 'LOCKED', quarter: '', step: nextStep }),
+        body: JSON.stringify({ title: 'New Book', author: '', description: '', status: 'LOCKED', quarter: '', step: nextStep }),
       });
       const node = await res.json();
       setRoadmap((prev) => [...prev, node]);
@@ -2394,11 +2469,21 @@ function RoadmapEditor({ token }: { token: string }) {
                 <span className="text-[10px] font-bold text-gray-400 shrink-0">Step {node.step}</span>
                 <input
                   className={`${inputClass} flex-1`}
-                  placeholder="Title"
+                  placeholder="Book title"
                   value={node.title}
                   onChange={(e) => {
                     const next = [...roadmap];
                     next[idx] = { ...node, title: e.target.value };
+                    setRoadmap(next);
+                  }}
+                />
+                <input
+                  className={`${inputClass} flex-1`}
+                  placeholder="Author"
+                  value={node.author || ''}
+                  onChange={(e) => {
+                    const next = [...roadmap];
+                    next[idx] = { ...node, author: e.target.value };
                     setRoadmap(next);
                   }}
                 />

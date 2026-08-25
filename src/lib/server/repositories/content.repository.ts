@@ -31,13 +31,22 @@ interface RoadmapRow {
   id: string;
   step: number;
   title: string;
+  author: string;
   description: string;
   status: 'COMPLETED' | 'IN_PROGRESS' | 'LOCKED';
   quarter: string;
 }
 
 function toRoadmap(row: RoadmapRow): RoadmapNode {
-  return { id: row.id, step: row.step, title: row.title, description: row.description, status: row.status, quarter: row.quarter };
+  return {
+    id: row.id,
+    step: row.step,
+    title: row.title,
+    author: row.author ?? '',
+    description: row.description,
+    status: row.status,
+    quarter: row.quarter,
+  };
 }
 
 export async function listRoadmap(): Promise<RoadmapNode[]> {
@@ -48,10 +57,18 @@ export async function listRoadmap(): Promise<RoadmapNode[]> {
 export async function updateRoadmapNode(id: string, updates: Partial<RoadmapNode>): Promise<RoadmapNode | null> {
   const { rows } = await getPool().query<RoadmapRow>(
     `UPDATE roadmap SET
-       title = COALESCE($2, title), description = COALESCE($3, description),
-       status = COALESCE($4, status), quarter = COALESCE($5, quarter), step = COALESCE($6, step)
+       title = COALESCE($2, title), author = COALESCE($3, author), description = COALESCE($4, description),
+       status = COALESCE($5, status), quarter = COALESCE($6, quarter), step = COALESCE($7, step)
      WHERE id = $1 RETURNING *`,
-    [id, updates.title ?? null, updates.description ?? null, updates.status ?? null, updates.quarter ?? null, updates.step ?? null]
+    [
+      id,
+      updates.title ?? null,
+      updates.author ?? null,
+      updates.description ?? null,
+      updates.status ?? null,
+      updates.quarter ?? null,
+      updates.step ?? null,
+    ]
   );
   if (rows.length === 0) return null;
   return toRoadmap(rows[0]);
@@ -59,8 +76,8 @@ export async function updateRoadmapNode(id: string, updates: Partial<RoadmapNode
 
 export async function createRoadmapNode(input: Omit<RoadmapNode, 'id'>): Promise<RoadmapNode> {
   const { rows } = await getPool().query<RoadmapRow>(
-    `INSERT INTO roadmap (step, title, description, status, quarter) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [input.step, input.title, input.description ?? '', input.status || 'LOCKED', input.quarter ?? '']
+    `INSERT INTO roadmap (step, title, author, description, status, quarter) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [input.step, input.title, input.author ?? '', input.description ?? '', input.status || 'LOCKED', input.quarter ?? '']
   );
   return toRoadmap(rows[0]);
 }

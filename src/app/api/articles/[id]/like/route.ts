@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const userKey = getArticleLikeUserKey(request, auth);
     const result = await toggleArticleLike(id, userKey);
     if (!result) return NextResponse.json({ error: 'Maqaalka lama helin.' }, { status: 404 });
-    return NextResponse.json(result);
+    return NextResponse.json({ likesCount: result.likesCount, liked: result.liked });
   } catch (err) {
     return handleError(err, 'POST /api/articles/[id]/like');
   }

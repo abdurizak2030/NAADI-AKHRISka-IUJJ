@@ -71,12 +71,15 @@ CREATE TABLE IF NOT EXISTS comments (
   article_id  TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
   author_id   TEXT,
   author_name TEXT NOT NULL,
+  commenter_email TEXT NOT NULL DEFAULT '',
   avatar_url  TEXT,
   content     TEXT NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS commenter_email TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS comments_article_idx ON comments (article_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS comments_created_idx ON comments (created_at DESC);
 
 CREATE TABLE IF NOT EXISTS likes (
   article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
@@ -117,6 +120,7 @@ ALTER TABLE videos ADD COLUMN IF NOT EXISTS thumbnail_url TEXT;
 CREATE TABLE IF NOT EXISTS talks (
   id          TEXT PRIMARY KEY DEFAULT ('tlk_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
   title       TEXT NOT NULL,
+  author      TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
   audio_url   TEXT,
   speaker     TEXT NOT NULL,
@@ -137,6 +141,7 @@ CREATE TABLE IF NOT EXISTS gallery (
 CREATE TABLE IF NOT EXISTS events (
   id          TEXT PRIMARY KEY DEFAULT ('evt_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
   title       TEXT NOT NULL,
+  author      TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
   location    TEXT NOT NULL DEFAULT '',
   date        DATE NOT NULL,
@@ -170,10 +175,13 @@ CREATE TABLE IF NOT EXISTS roadmap (
   id          TEXT PRIMARY KEY DEFAULT ('rn_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
   step        INTEGER NOT NULL,
   title       TEXT NOT NULL,
+  author      TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
   status      TEXT NOT NULL DEFAULT 'LOCKED' CHECK (status IN ('COMPLETED', 'IN_PROGRESS', 'LOCKED')),
   quarter     TEXT NOT NULL DEFAULT ''
 );
+
+ALTER TABLE roadmap ADD COLUMN IF NOT EXISTS author TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS roadmap_progress (
   id         INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),

@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import Image from 'next/image';
 import { API_BASE_URL, mediaUrl } from '../lib/api';
 import { GraduationCap, Trophy, ArrowRight, Star, Clock, MapPin, Sparkles, Heart, MessageSquare } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -78,36 +79,9 @@ export default function Home({
         className="relative w-full min-h-screen flex flex-col items-center justify-center text-center bg-gradient-to-br from-emerald-800 via-emerald-900 to-emerald-950 text-white overflow-hidden shadow-2xl px-6 py-16 sm:px-12" 
         id="hero-banner"
       >
-        {/* Animated Background Orbs */}
-        <motion.div 
-          animate={{
-            scale: [1, 1.2, 1],
-            x: [0, 50, 0],
-            y: [0, -30, 0],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="absolute -top-10 -right-10 w-96 h-96 bg-amber-500/10 rounded-full blur-[100px] pointer-events-none" 
-        />
-        <motion.div 
-          animate={{
-            scale: [1, 1.15, 1],
-            x: [0, -40, 0],
-            y: [0, 40, 0],
-          }}
-          transition={{
-            duration: 18,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 1
-          }}
-          className="absolute -bottom-10 -left-10 w-96 h-96 bg-emerald-600/20 rounded-full blur-[100px] pointer-events-none" 
-        />
         <div className="absolute inset-0 bg-[radial-gradient(#D4AF37_1.5px,transparent_1.5px)] [background-size:24px_24px] opacity-[0.06]" />
-
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),transparent_45%)]" />
+        <div className="absolute inset-x-0 top-0 h-px bg-amber-300/30" />
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center space-y-8">
           {/* Official Club Logo - centered at the top of the Hero section */}
           <motion.div 
@@ -119,11 +93,16 @@ export default function Home({
             id="hero-official-logo"
           >
             <div className="absolute inset-1.5 border border-dashed border-amber-500/30 rounded-full" />
-            <img
-              src="/logo.png"
-              alt="IUJ Reading Club Logo"
-              className="w-full h-full rounded-full object-cover drop-shadow-lg"
-            />
+            <div className="relative h-full w-full overflow-hidden rounded-full">
+              <Image
+                src="/logo.png"
+                alt="IUJ Reading Club Logo"
+                fill
+                sizes="(max-width: 640px) 160px, 192px"
+                priority
+                className="object-cover drop-shadow-lg"
+              />
+            </div>
           </motion.div>
 
           <div className="space-y-3">
@@ -303,7 +282,6 @@ export default function Home({
         {/* Founder Bio Block */}
         {founder && (
           <div className="lg:col-span-7 bg-emerald-950 text-white rounded-3xl p-6 sm:p-8 border border-amber-500/20 shadow-xl flex flex-col justify-between relative overflow-hidden" id="founder-block">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-800/25 rounded-full blur-2xl pointer-events-none" />
             <div className="space-y-6 relative z-10">
               <div className="inline-flex items-center space-x-1.5 text-amber-400 text-xs font-bold tracking-wider uppercase">
                 <GraduationCap className="w-4 h-4" />
@@ -313,8 +291,12 @@ export default function Home({
               <p className="text-amber-100/70 text-xs sm:text-sm font-serif italic">{founder.title}</p>
               
               <div className="flex flex-col sm:flex-row gap-6 items-start pt-2">
-                <img loading="lazy"                   src={mediaUrl(founder.imageUrl)}
+                <Image
+                  src={mediaUrl(founder.imageUrl) || '/logoIUJJ.jpg'}
                   alt={founder.name}
+                  width={112}
+                  height={112}
+                  sizes="112px"
                   className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-amber-400 shadow-md shrink-0"
                 />
                 <div className="space-y-4">
@@ -338,8 +320,12 @@ export default function Home({
               </div>
               
               <div className="flex items-center space-x-4">
-                <img loading="lazy"                   src={mediaUrl(memberOfMonth.avatarUrl)}
+                <Image
+                  src={mediaUrl(memberOfMonth.avatarUrl) || '/logoIUJJ.jpg'}
                   alt={memberOfMonth.name}
+                  width={64}
+                  height={64}
+                  sizes="64px"
                   className="w-16 h-16 rounded-full object-cover border-2 border-amber-400 shadow-md shrink-0"
                 />
                 <div>
@@ -409,9 +395,12 @@ export default function Home({
                 id={`upcoming-event-card-${evt.id}`}
               >
                 <div className="relative h-44 bg-gray-100">
-                  <img loading="lazy"                     src={mediaUrl(evt.image)}
+                  <Image
+                    src={mediaUrl(evt.image) || '/jaamacada.jpg'}
                     alt={evt.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover"
                   />
                   <div className="absolute top-3 left-3 bg-emerald-900 text-amber-300 text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-md border border-amber-400/20">
                     {evt.date}

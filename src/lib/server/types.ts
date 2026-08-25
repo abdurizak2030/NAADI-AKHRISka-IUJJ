@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -46,6 +46,7 @@ export interface Article {
   likesCount: number;
   commentsCount: number;
   imageUrl?: string;
+  likedByCurrentUser?: boolean;
 }
 
 export interface Comment {
@@ -56,6 +57,11 @@ export interface Comment {
   avatarUrl?: string;
   content: string;
   createdAt: string;
+}
+
+export interface AdminComment extends Comment {
+  commenterEmail: string;
+  articleTitle: string;
 }
 
 export interface PdfBook {
@@ -98,6 +104,7 @@ export interface RoadmapNode {
   id: string;
   step: number;
   title: string;
+  author: string;
   description: string;
   status: 'COMPLETED' | 'IN_PROGRESS' | 'LOCKED';
   quarter: string;
@@ -196,6 +203,7 @@ export interface ClubSettings {
   tiktokUrl?: string;
   facebookUrl?: string;
   xUrl?: string;
+  articlePublishingEnabled?: boolean;
 }
 
 export interface ContactMessage {
@@ -217,7 +225,7 @@ export interface AuditLog {
 }
 
 // NOTE: Every collection above is backed by its own normalized table in
-// Neon PostgreSQL — see /database.sql at the project root (canonical,
+// Neon PostgreSQL â€” see /database.sql at the project root (canonical,
 // human-run reference) and backend/src/db/schema.ts (idempotent runtime
 // bootstrap). There is no JSONB "blob" store anymore.
 

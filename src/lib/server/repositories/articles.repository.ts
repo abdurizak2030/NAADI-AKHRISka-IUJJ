@@ -5,7 +5,7 @@
 
 import type { PoolClient } from 'pg';
 import { getPool } from '../db/pool';
-import { Article, Comment } from '../types';
+import { AdminComment, Article, Comment } from '../types';
 
 type ArticleLanguage = 'Somali' | 'Arabic' | 'English';
 type ArticleStatus = 'DRAFT' | 'PENDING' | 'PUBLISHED';
@@ -329,6 +329,7 @@ interface CommentRow {
   article_id: string;
   author_id: string | null;
   author_name: string;
+  commenter_email?: string | null;
   avatar_url: string | null;
   content: string;
   created_at: string | Date;
@@ -349,7 +350,7 @@ function toComment(row: CommentRow): Comment {
 export async function listCommentsForArticle(articleId: string): Promise<Comment[]> {
   const pool = getPool();
   const { rows } = await pool.query<CommentRow>(
-    'SELECT * FROM comments WHERE article_id = $1 ORDER BY created_at DESC',
+    'SELECT id, article_id, author_id, author_name, avatar_url, content, created_at FROM comments WHERE article_id = $1 ORDER BY created_at DESC',
     [articleId]
   );
   return rows.map(toComment);
@@ -360,6 +361,7 @@ export interface CreateCommentInput {
   authorId: string;
   authorName: string;
   avatarUrl?: string;
+  commenterEmail: string;
   content: string;
 }
 
@@ -374,15 +376,71 @@ export async function createComment(input: CreateCommentInput): Promise<Comment 
       return null;
     }
     const { rows } = await client.query<CommentRow>(
-      `INSERT INTO comments (article_id, author_id, author_name, avatar_url, content)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [input.articleId, input.authorId, input.authorName, input.avatarUrl ?? null, input.content]
+      `INSERT INTO comments (article_id, author_id, author_name, commenter_email, avatar_url, content)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [
+        input.articleId,
+        input.authorId,
+        input.authorName,
+        input.commenterEmail,
+        input.avatarUrl ?? null,
+        input.content,
+      ]
     );
     await client.query('UPDATE articles SET comments_count = comments_count + 1 WHERE id = $1', [
       input.articleId,
     ]);
     await client.query('COMMIT');
     return toComment(rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+interface AdminCommentRow extends CommentRow {
+  commenter_email: string | null;
+  article_title: string | null;
+}
+
+function toAdminComment(row: AdminCommentRow): AdminComment {
+  return {
+    ...toComment(row),
+    commenterEmail: row.commenter_email ?? '',
+    articleTitle: row.article_title ?? 'Deleted article',
+  };
+}
+
+export async function listAllCommentsForAdmin(): Promise<AdminComment[]> {
+  const pool = getPool();
+  const { rows } = await pool.query<AdminCommentRow>(
+    'SELECT c.id, c.article_id, c.author_id, c.author_name, c.commenter_email, c.avatar_url, c.content, c.created_at, a.title AS article_title FROM comments c LEFT JOIN articles a ON a.id = c.article_id ORDER BY c.created_at DESC'
+  );
+  return rows.map(toAdminComment);
+}
+
+export async function deleteComment(id: string): Promise<AdminComment | null> {
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query<AdminCommentRow>(
+      'SELECT c.id, c.article_id, c.author_id, c.author_name, c.commenter_email, c.avatar_url, c.content, c.created_at, a.title AS article_title FROM comments c LEFT JOIN articles a ON a.id = c.article_id WHERE c.id = $1 FOR UPDATE OF c',
+      [id]
+    );
+    if (rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    await client.query('DELETE FROM comments WHERE id = $1', [id]);
+    await client.query('UPDATE articles SET comments_count = GREATEST(comments_count - 1, 0) WHERE id = $1', [
+      rows[0].article_id,
+    ]);
+    await client.query('COMMIT');
+    return toAdminComment(rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

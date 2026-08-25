@@ -4,6 +4,40 @@ import { getAuthPayload } from '@/lib/server/auth';
 import { createComment, listCommentsForArticle } from '@/lib/server/repositories/articles.repository';
 import { findUserById } from '@/lib/server/repositories/user.repository';
 
+const EMAIL_RE = /^[^s@]+@[^s@]+.[^s@]+$/;
+const MAX_NAME_LENGTH = 80;
+const MAX_EMAIL_LENGTH = 254;
+const MAX_COMMENT_LENGTH = 2000;
+
+function sanitizeCommentPayload(body: Record<string, unknown>) {
+  const authorName = typeof body.authorName === 'string' ? body.authorName.trim() : '';
+  const rawEmail =
+    typeof body.commenterEmail === 'string'
+      ? body.commenterEmail
+      : typeof body.email === 'string'
+        ? body.email
+        : '';
+  const commenterEmail = rawEmail.trim().toLowerCase();
+  const content = typeof body.content === 'string' ? body.content.trim() : '';
+  return { authorName, commenterEmail, content };
+}
+
+function validateComment(authorName: string, commenterEmail: string, content: string): string | null {
+  if (!authorName || !commenterEmail || !content) {
+    return 'Please enter your name, email, and comment.';
+  }
+  if (authorName.length < 2 || authorName.length > MAX_NAME_LENGTH) {
+    return 'Name must be between 2 and 80 characters.';
+  }
+  if (commenterEmail.length > MAX_EMAIL_LENGTH || !EMAIL_RE.test(commenterEmail)) {
+    return 'Please enter a valid email address.';
+  }
+  if (content.length < 2 || content.length > MAX_COMMENT_LENGTH) {
+    return 'Comment must be between 2 and 2000 characters.';
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const notReady = await requireDbReady();
   if (notReady) return notReady;
@@ -21,21 +55,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   try {
     const { id } = await params;
-    const { content, authorName } = await safeJsonBody(request);
-    if (!content) {
-      return NextResponse.json({ error: 'Qoraalka faallada lagama maarmaan ah.' }, { status: 400 });
+    const body = (await safeJsonBody(request)) as Record<string, unknown>;
+    const { authorName, commenterEmail, content } = sanitizeCommentPayload(body);
+    const validationError = validateComment(authorName, commenterEmail, content);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    let finalAuthorName = authorName || 'Guest Scholar';
     let finalAuthorId = 'guest';
     let finalAvatarUrl = '/logoIUJJ.jpg';
 
-    // Optional auth: signed-in commenters get their real name/avatar, but
-    // guests may still comment (no 401 here) — mirrors the original route.
     const payload = getAuthPayload(request);
     if (payload) {
       const user = await findUserById(payload.userId);
-      finalAuthorName = payload.name;
       finalAuthorId = payload.userId;
       if (user?.avatarUrl) finalAvatarUrl = user.avatarUrl;
     }
@@ -43,7 +75,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const comment = await createComment({
       articleId: id,
       authorId: finalAuthorId,
-      authorName: finalAuthorName,
+      authorName,
+      commenterEmail,
       avatarUrl: finalAvatarUrl,
       content,
     });
