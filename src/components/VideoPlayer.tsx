@@ -49,6 +49,10 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function isFacebookVideoUrl(value?: string): boolean {
+  return Boolean(value && /(^|\.)facebook\.com\//i.test(value));
+}
+
 export default function VideoPlayer({ videoUrl, youtubeId, title, posterUrl, autoPlay }: VideoPlayerProps) {
   // ------------------------------------------------------------------
   // All hooks must run unconditionally on every render (Rules of Hooks),
@@ -131,6 +135,20 @@ export default function VideoPlayer({ videoUrl, youtubeId, title, posterUrl, aut
           src={`https://www.youtube.com/embed/${youtubeId}?enablejsapi=1&autoplay=${autoPlay ? 1 : 0}&rel=0`}
           title={title}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+
+  if (isFacebookVideoUrl(videoUrl)) {
+    return (
+      <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden" id="facebook-player-wrapper">
+        <iframe
+          className="absolute inset-0 w-full h-full"
+          src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(videoUrl!)}&show_text=false&autoplay=${autoPlay ? 'true' : 'false'}`}
+          title={title}
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
           allowFullScreen
         />
       </div>

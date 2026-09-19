@@ -4,7 +4,7 @@ import { getAuthPayload } from '@/lib/server/auth';
 import { createComment, listCommentsForArticle } from '@/lib/server/repositories/articles.repository';
 import { findUserById } from '@/lib/server/repositories/user.repository';
 
-const EMAIL_RE = /^[^s@]+@[^s@]+.[^s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_NAME_LENGTH = 80;
 const MAX_EMAIL_LENGTH = 254;
 const MAX_COMMENT_LENGTH = 2000;

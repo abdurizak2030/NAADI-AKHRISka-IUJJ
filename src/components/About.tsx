@@ -337,7 +337,7 @@ export default function About({ testimonials, founder = null }: AboutProps) {
               Islamic University of Jigjiga
             </h3>
             <p className="mt-3 text-sm leading-7 text-gray-600">
-              Jamacadda Islaamiga ee Jigjiga waxaa la aasaasay 2014 si ay u noqoto xarun cilmiyeed oo heer sare ah oo ay ku xirnaadaan ardayda Soomaaliyeed iyo dadka kale ee gobolka. Jaamacaddu waxay bixisaa barnaamijyo kala duwan oo heer jaamacadeed ah, iyadoo u adeegaysa nidaam waxbarasho oo ku dhisan aqoonta iyo akhlaaqda.
+             تُعد الجامعة الإسلامية في جكجكا صرحًا علميًا رائدًا في منطقة القرن الأفريقي، تأسست لتكون منارة للعلم والمعرفة وخدمة المجتمع. نسعى لتقديم تعليم عالي الجودة يجمع بين العلوم الشرعية والعلوم العصرية، مع الحفاظ على الهوية الإسلامية والقيم الأخلاقية.
             </p>
           </div>
 

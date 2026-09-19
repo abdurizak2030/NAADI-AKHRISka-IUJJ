@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL, mediaUrl } from '../lib/api';
-import { MessageSquare, Heart, Globe, Calendar, User, ArrowLeft, Search, X, Check, Sparkles } from 'lucide-react';
+import { MessageSquare, Heart, Globe, Calendar, User, ArrowLeft, Search, X, Check, Sparkles, Share2 } from 'lucide-react';
 import { Article, Comment } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -37,6 +37,8 @@ export default function Articles({
   const [submittingComment, setSubmittingComment] = useState<boolean>(false);
   const [successMsg, setSuccessMsg] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [guestEmail, setGuestEmail] = useState<string>('');
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Load comments for active article
   useEffect(() => {
@@ -96,7 +98,8 @@ export default function Articles({
         headers,
         body: JSON.stringify({ 
           content: commentText,
-          authorName: token ? undefined : (guestName.trim() || 'Anonymous Scholar')
+          authorName: guestName.trim(),
+          email: guestEmail.trim()
         })
       });
       const data = await res.json();
@@ -104,6 +107,7 @@ export default function Articles({
         setComments(prev => [data, ...prev]);
         setCommentText('');
         setGuestName('');
+        setGuestEmail('');
         setSuccessMsg('Your commentary has been successfully published!');
         onRefreshArticles();
         setTimeout(() => setSuccessMsg(''), 4000);
@@ -115,6 +119,20 @@ export default function Articles({
     } finally {
       setSubmittingComment(false);
     }
+  };
+
+  const shareArticle = (platform: string) => {
+    if (!activeArticle) return;
+    const url = window.location.href;
+    const text = `${activeArticle.title} - Reading Club of the Islamic University of Jigjiga`;
+    const links: Record<string, string> = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`,
+      x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      telegram: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
+    };
+    window.open(links[platform], '_blank', 'noopener,noreferrer,width=620,height=520');
+    setShareOpen(false);
   };
 
   // Filter articles
@@ -254,6 +272,14 @@ export default function Articles({
                   <MessageSquare className="w-5 h-5 text-emerald-800" />
                   <span>Discussion Forum ({comments.length})</span>
                 </div>
+                <div className="relative ml-auto">
+                  <button onClick={() => setShareOpen((value) => !value)} className="flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-900 hover:text-amber-600" aria-expanded={shareOpen} aria-haspopup="menu">
+                    <Share2 className="w-5 h-5" /> Share
+                  </button>
+                  {shareOpen && <div className="absolute right-0 top-9 z-10 w-40 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl" role="menu">
+                    {(['facebook', 'whatsapp', 'x', 'telegram'] as const).map((platform) => <button key={platform} onClick={() => shareArticle(platform)} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-emerald-50 hover:text-emerald-900 capitalize">{platform === 'x' ? 'X' : platform}</button>)}
+                  </div>}
+                </div>
               </div>
 
               {/* Comments Section */}
@@ -278,17 +304,24 @@ export default function Articles({
 
                 {/* Comment submission form */}
                 <form onSubmit={handleCommentSubmit} className="space-y-3" id="form-submit-comment">
-                  {!token && (
-                    <div className="relative">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input
                         type="text"
+                        required
                         placeholder={t('articlesPage.commentNamePlaceholder')}
                         value={guestName}
                         onChange={(e) => setGuestName(e.target.value)}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-emerald-800 focus:outline-none focus:border-emerald-800 transition-all shadow-sm"
                       />
-                    </div>
-                  )}
+                      <input
+                        type="email"
+                        required
+                        placeholder="Your email address"
+                        value={guestEmail}
+                        onChange={(e) => setGuestEmail(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-emerald-800 focus:outline-none focus:border-emerald-800 transition-all shadow-sm"
+                      />
+                  </div>
                   <textarea
                     id="textarea-comment"
                     rows={4}

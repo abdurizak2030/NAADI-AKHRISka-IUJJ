@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await safeJsonBody(request);
     const { title, author } = body;
-    if (!title || !author) {
-      return NextResponse.json({ error: 'Buuxi magaca iyo qoraha labadaba.' }, { status: 400 });
+    if (!title || !author || !body.downloadUrl || body.downloadUrl === '#') {
+      return NextResponse.json({ error: 'Buuxi metadata-ga oo geli faylka PDF-ga.' }, { status: 400 });
     }
     const pdf = await createPdf(body);
     addAuditLog(auth.payload.userId, auth.payload.name, 'CREATE_PDF', `Lagu daray buug cusub: ${title}`);

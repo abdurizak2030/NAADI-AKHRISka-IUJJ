@@ -6,8 +6,9 @@
  */
 
 import React, { useState } from 'react';
-import { Library, Search, Download, BookOpen, FileText, Globe, Check } from 'lucide-react';
+import { Library, Search, Download, BookOpen, FileText, Globe, Check, Eye, X } from 'lucide-react';
 import { PdfBook } from '../types';
+import { mediaUrl } from '../lib/api';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -22,6 +23,7 @@ export default function LibraryView({ pdfs, token, onLoginPrompt }: LibraryProps
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [openBook, setOpenBook] = useState<PdfBook | null>(null);
 
   // Filter books
   const filteredPdfs = pdfs.filter(p => {
@@ -41,11 +43,17 @@ export default function LibraryView({ pdfs, token, onLoginPrompt }: LibraryProps
       return;
     }
     
-    // Smooth custom in-page notification replacing native alert window
-    setToastMessage(`Download initiated for "${p.title}" (${p.pagesCount} Pages). Accessing secure academic database...`);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 4500);
+    if (!p.downloadUrl || p.downloadUrl === '#') {
+      setToastMessage('This book is not available for download yet.');
+      window.setTimeout(() => setToastMessage(null), 3500);
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = mediaUrl(p.downloadUrl);
+    link.download = `${p.title}.pdf`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.click();
   };
 
   return (
@@ -145,14 +153,15 @@ export default function LibraryView({ pdfs, token, onLoginPrompt }: LibraryProps
               <div className="p-5.5 flex gap-4.5">
                 {/* Simulated Book Cover */}
                 <div className="w-24 h-32 bg-gradient-to-br from-emerald-900 to-emerald-950 rounded-xl shadow-md border-r-4 border-amber-400 flex flex-col justify-between p-3 flex-shrink-0 relative overflow-hidden text-white">
+                  {pdf.coverUrl && pdf.coverUrl !== '/logoIUJJ.jpg' && <img src={mediaUrl(pdf.coverUrl)} alt="" className="absolute inset-0 w-full h-full object-cover opacity-55" />}
                   <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:10px_10px]" />
-                  <div className="text-[8px] font-bold text-amber-400 border-b border-amber-400/20 pb-1 uppercase tracking-widest truncate">
+                  <div className="relative text-[8px] font-bold text-amber-400 border-b border-amber-400/20 pb-1 uppercase tracking-widest truncate">
                     {pdf.category.split(' ')[0]}
                   </div>
-                  <div className="text-[10px] font-bold leading-tight line-clamp-3 font-sans my-1 text-emerald-50">
+                  <div className="relative text-[10px] font-bold leading-tight line-clamp-3 font-sans my-1 text-emerald-50">
                     {pdf.title}
                   </div>
-                  <div className="text-[8px] text-emerald-200 italic truncate border-t border-emerald-800/80 pt-1 font-mono">
+                  <div className="relative text-[8px] text-emerald-200 italic truncate border-t border-emerald-800/80 pt-1 font-mono">
                     {pdf.author}
                   </div>
                 </div>
@@ -191,6 +200,14 @@ export default function LibraryView({ pdfs, token, onLoginPrompt }: LibraryProps
                 </div>
 
                 <button
+                  id={`btn-read-${pdf.id}`}
+                  onClick={() => setOpenBook(pdf)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-800/20 text-emerald-900 hover:bg-emerald-50 transition-all text-xs font-bold cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Read</span>
+                </button>
+                <button
                   id={`btn-download-${pdf.id}`}
                   onClick={(e) => handleDownload(pdf, e)}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-900 hover:bg-emerald-800 text-white transition-all text-xs font-bold shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
@@ -203,6 +220,28 @@ export default function LibraryView({ pdfs, token, onLoginPrompt }: LibraryProps
           ))
         )}
       </div>
+
+      <AnimatePresence>
+        {openBook && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-emerald-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+            onClick={() => setOpenBook(null)}
+            role="dialog" aria-modal="true" aria-label={`Read ${openBook.title}`}
+          >
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-5xl h-[92vh] bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+              <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-gray-200">
+                <div className="min-w-0"><h3 className="font-bold text-emerald-950 truncate">{openBook.title}</h3><p className="text-xs text-gray-500 truncate">{openBook.author}</p></div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {openBook.downloadUrl && openBook.downloadUrl !== '#' && <a href={mediaUrl(openBook.downloadUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-900 text-white text-xs font-bold"><Download className="w-3.5 h-3.5" /> Download</a>}
+                  <button onClick={() => setOpenBook(null)} aria-label="Close reader" className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"><X className="w-5 h-5" /></button>
+                </div>
+              </div>
+              {openBook.downloadUrl && openBook.downloadUrl !== '#' ? <iframe src={mediaUrl(openBook.downloadUrl)} title={`Reading ${openBook.title}`} className="flex-1 w-full" /> : <div className="flex-1 grid place-items-center text-sm text-gray-500">The PDF file is not available yet.</div>}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

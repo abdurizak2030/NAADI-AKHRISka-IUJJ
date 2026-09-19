@@ -216,6 +216,17 @@ export default function App() {
   };
 
   const handleSetTab = (tab: string) => {
+    if (tab === 'home') {
+      setCurrentTab('home');
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+      return;
+    }
+    if (currentTab === 'home' && ['articles', 'library', 'media', 'events'].includes(tab)) {
+      window.requestAnimationFrame(() => {
+        document.getElementById(`${tab}-section`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      return;
+    }
     setCurrentTab(tab);
   };
 
@@ -264,24 +275,34 @@ export default function App() {
       {/* 2. Primary Page Render View */}
       <main className={`flex-grow w-full mx-auto ${currentTab === 'home' ? '' : 'max-w-7xl px-4 sm:px-6 lg:px-8 py-8'}`}>
         {currentTab === 'home' && (
-          <Home
-            founder={founder}
-            memberOfMonth={memberOfMonth}
-            upcomingEvents={events}
-            setTab={setCurrentTab}
-            onRegisterEvent={handleRegisterEvent}
-            userEmail={user?.email}
-            user={user}
-            articles={articles}
-            token={token}
-            onRefreshArticles={() => {
-              fetch(`${API_BASE_URL}/api/articles`)
-                .then(r => r.json())
-                .then(data => { if (Array.isArray(data)) setArticles(data); });
-            }}
-            setActiveArticle={setActiveArticle}
-            testimonials={testimonials}
-          />
+          <>
+            <Home
+              founder={founder}
+              memberOfMonth={memberOfMonth}
+              upcomingEvents={events}
+              setTab={handleSetTab}
+              onRegisterEvent={handleRegisterEvent}
+              userEmail={user?.email}
+              user={user}
+              articles={articles}
+              token={token}
+              onRefreshArticles={() => {
+                fetch(`${API_BASE_URL}/api/articles`)
+                  .then(r => r.json())
+                  .then(data => { if (Array.isArray(data)) setArticles(data); });
+              }}
+              setActiveArticle={setActiveArticle}
+              testimonials={testimonials}
+            />
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-20 pb-20">
+              <Suspense fallback={<RouteLoader />}>
+                <section aria-labelledby="articles-section-heading"><Articles articles={articles} token={token} onRefreshArticles={() => fetch(`${API_BASE_URL}/api/articles`).then(r => r.json()).then(data => { if (Array.isArray(data)) setArticles(data); })} onLoginPrompt={() => handleSetTab('login')} activeArticle={activeArticle} setActiveArticle={setActiveArticle} /></section>
+                <section aria-labelledby="library-section-heading"><LibraryView pdfs={pdfs} token={token} onLoginPrompt={() => handleSetTab('login')} /></section>
+                <section aria-labelledby="media-section-heading"><Media videos={videos} gallery={gallery} /></section>
+                <section aria-labelledby="events-section-heading"><Events events={events} /></section>
+              </Suspense>
+            </div>
+          </>
         )}
 
         {currentTab === 'articles' && (

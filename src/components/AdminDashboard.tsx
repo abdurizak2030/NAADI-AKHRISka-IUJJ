@@ -1004,6 +1004,33 @@ function PdfFormModal({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  const uploadFile = async (file: File, kind: 'pdf' | 'image') => {
+    const setter = kind === 'pdf' ? setUploadingPdf : setUploadingCover;
+    setter(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API_BASE_URL}/api/uploads/${kind}`, {
+        method: 'POST',
+        headers: authHeaders(token, false),
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Upload failed.');
+        return;
+      }
+      setForm((current) => ({ ...current, [kind === 'pdf' ? 'downloadUrl' : 'coverUrl']: data.url }));
+    } catch {
+      setError('Unable to upload the file. Please try again.');
+    } finally {
+      setter(false);
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1051,10 +1078,21 @@ function PdfFormModal({
             <input className={inputClass} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} />
           </Field>
         </div>
-        <Field label="Cover image URL">
+        <Field label="Cover image">
+          <label className="mb-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100">
+            {uploadingCover ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+            {uploadingCover ? 'Uploading cover...' : 'Choose cover image'}
+            <input type="file" accept="image/*" className="sr-only" disabled={uploadingCover} onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0], 'image')} />
+          </label>
           <input className={inputClass} value={form.coverUrl} onChange={(e) => setForm({ ...form, coverUrl: e.target.value })} />
         </Field>
-        <Field label="Download URL">
+        <Field label="PDF file">
+          <label className="mb-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-amber-300 bg-amber-50 px-3 py-3 text-sm font-semibold text-emerald-900 hover:bg-amber-100">
+            {uploadingPdf ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
+            {uploadingPdf ? 'Uploading PDF...' : existing?.downloadUrl && existing.downloadUrl !== '#' ? 'Replace PDF file' : 'Choose PDF from computer'}
+            <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={uploadingPdf} onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0], 'pdf')} />
+          </label>
+          <p className="mb-2 text-[11px] text-gray-500">PDF files up to 20 MB. The uploaded file will be readable in the website.</p>
           <input className={inputClass} value={form.downloadUrl} onChange={(e) => setForm({ ...form, downloadUrl: e.target.value })} />
         </Field>
         <Field label="Pages">
