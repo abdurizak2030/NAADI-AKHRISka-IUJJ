@@ -1,157 +1,161 @@
 'use client';
 
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+ * Sticky glass navigation. Real <Link>s (so every page is a shareable URL,
+ * prefetched by Next), animated active indicator, mobile sheet, global search,
+ * theme + language switchers and the existing member/admin entry points.
  */
-
-import React, { useState } from 'react';
-import { mediaUrl } from '../lib/api';
-import { BookOpen, User, LogOut, ShieldAlert, Library, Calendar, MessageSquare, Phone, Info, Menu, X, Languages, Sun, Moon } from 'lucide-react';
-import { User as UserType } from '../types';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
+import { Search, Menu, X, Sun, Moon, Languages, LogOut, ShieldAlert, User as UserIcon } from 'lucide-react';
+import { mediaUrl } from '../lib/api';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useTheme } from '../theme/ThemeContext';
+import { useApp } from './AppProvider';
 
-interface NavbarProps {
-  user: UserType | null;
-  currentTab: string;
-  setTab: (tab: string) => void;
-  onLogout: () => void;
-}
+const languageOptions: { code: 'en' | 'ar' | 'so' | 'am'; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'ar', label: 'العربية' },
+  { code: 'so', label: 'Soomaali' },
+  { code: 'am', label: 'አማርኛ' },
+];
 
-export default function Navbar({ user, currentTab, setTab, onLogout }: NavbarProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+export default function Navbar() {
+  const pathname = usePathname() || '/';
   const { t, language, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
-  const isSelected = (tabName: string) => currentTab === tabName;
+  const { user, logout, openSearch } = useApp();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const navItems = [
-    { id: 'home', label: t('nav.home'), icon: BookOpen },
-    { id: 'about', label: t('nav.about'), icon: Info },
-    { id: 'articles', label: t('nav.articles'), icon: MessageSquare },
-    { id: 'library', label: t('nav.library'), icon: Library },
-    { id: 'media', label: t('nav.media'), icon: Library },
-    { id: 'events', label: t('nav.events'), icon: Calendar },
-    { id: 'contact', label: t('nav.contact'), icon: Phone },
+    { href: '/', label: t('nav.home') },
+    { href: '/articles', label: t('nav.articles') },
+    { href: '/library', label: t('nav.library') },
+    { href: '/videos', label: t('nav.videos') },
+    { href: '/about', label: t('nav.aboutClub') },
+    { href: '/contact', label: t('nav.contact') },
   ];
 
-  const handleMobileNavClick = (tabId: string) => {
-    setTab(tabId);
-    setMobileMenuOpen(false);
-  };
+  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`));
 
-  const languageOptions: { code: 'en' | 'ar' | 'so' | 'am'; label: string }[] = [
-    { code: 'en', label: 'English' },
-    { code: 'ar', label: 'العربية' },
-    { code: 'so', label: 'Soomaali' },
-    { code: 'am', label: 'አማርኛ' },
-  ];
-  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  useEffect(() => {
+    setMobileOpen(false);
+    setLangOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-50 px-3 sm:px-6 pt-3" id="main-header">
+    <header className="site-header sticky top-0 z-50 px-3 sm:px-6 pt-3" id="main-header">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between h-16 sm:h-[72px] bg-white/85 dark:bg-emerald-950/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_30px_-8px_rgba(11,93,42,0.18)] border border-emerald-800/10 dark:border-amber-500/15 px-3 sm:px-5 transition-all duration-300">
+        <div
+          className={`site-nav flex items-center justify-between gap-2 h-16 sm:h-[68px] backdrop-blur-xl rounded-2xl border px-3 sm:px-5 transition-all duration-300 ${
+            scrolled
+              ? 'bg-white/90 dark:bg-emerald-950/90 border-emerald-800/10 dark:border-amber-500/15 shadow-[0_10px_34px_-14px_rgba(11,93,42,0.35)]'
+              : 'bg-white/70 dark:bg-emerald-950/60 border-emerald-800/5 dark:border-amber-500/10'
+          }`}
+        >
+          {/* Brand */}
+          <Link href="/" className="flex items-center gap-2.5 group shrink-0" aria-label={t('nav.home')} id="logo-brand">
+            <span className="relative w-10 h-10 rounded-full border-2 border-amber-500/50 bg-emerald-950 overflow-hidden transition-all duration-300 group-hover:border-amber-500 group-hover:scale-105">
+              <Image src="/logo.png" alt="IUJ Reading Club logo" fill sizes="40px" className="object-cover" priority />
+            </span>
+            <span className="hidden sm:block">
+              <span className="block text-xs font-bold text-emerald-900 dark:text-amber-400 tracking-wider leading-none uppercase">{t('nav.brandName')}</span>
+              <span className="block text-[9px] text-emerald-700/70 dark:text-emerald-200/60 font-serif tracking-widest mt-1 italic">{t('nav.brandSubtitle')}</span>
+            </span>
+          </Link>
 
-          {/* Logo & Brand (left) */}
-          <div className="flex items-center space-x-2.5 cursor-pointer group shrink-0" onClick={() => setTab('home')} id="logo-brand">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 border-amber-500/50 bg-emerald-950 flex items-center justify-center shadow-inner overflow-hidden transition-all duration-300 group-hover:border-amber-500 group-hover:scale-105">
-              <img
-                src="/logo.png"
-                alt="IUJ Reading Club Logo"
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-            </div>
-            <div className="hidden sm:block">
-              <h1 className="text-xs font-bold text-emerald-900 dark:text-amber-400 tracking-wider leading-none uppercase font-sans">
-                {t('nav.brandName')}
-              </h1>
-              <p className="text-[9px] text-emerald-700/70 dark:text-emerald-200/60 font-serif tracking-widest mt-1 italic">
-                {t('nav.brandSubtitle')}
-              </p>
-            </div>
-          </div>
-
-          {/* Desktop Navigation (centered) */}
-          <nav className="hidden xl:flex items-center justify-center flex-1 min-w-0 gap-0.5 px-2" id="desktop-nav">
+          {/* Desktop links */}
+          <nav className="hidden lg:flex items-center justify-center flex-1 gap-1 px-2" aria-label="Primary navigation" id="desktop-nav">
             {navItems.map((item) => {
-              const Icon = item.icon;
+              const active = isActive(item.href);
               return (
-                <button
-                  key={item.id}
-                  id={`nav-item-${item.id}`}
-                  onClick={() => setTab(item.id)}
-                  className={`relative flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                    isSelected(item.id)
-                      ? 'text-emerald-900 dark:text-amber-400 bg-amber-400/15'
-                      : 'text-emerald-900/60 dark:text-emerald-100/60 hover:text-emerald-900 dark:hover:text-amber-300 hover:bg-emerald-800/5 dark:hover:bg-amber-400/10'
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={`relative px-3.5 py-2 rounded-xl text-[13px] font-semibold whitespace-nowrap transition-colors ${
+                    active
+                      ? 'text-emerald-900 dark:text-amber-400'
+                      : 'text-emerald-900/65 dark:text-emerald-100/65 hover:text-emerald-900 dark:hover:text-amber-300 hover:bg-emerald-800/5 dark:hover:bg-amber-400/10'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5 opacity-70 shrink-0" />
-                  <span>{item.label}</span>
-                  {isSelected(item.id) && (
-                    <motion.div
-                      layoutId="activeTabGlow"
-                      className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-amber-500"
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  {active && (
+                    <motion.span
+                      layoutId="nav-active-pill"
+                      className="absolute inset-0 rounded-xl bg-amber-400/15 ring-1 ring-amber-500/25"
+                      transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                     />
                   )}
-                </button>
+                  <span className="relative">{item.label}</span>
+                </Link>
               );
             })}
           </nav>
 
-          {/* Auth & Dashboard Navigation (right) */}
-          <div className="flex items-center space-x-2 shrink-0" id="nav-auth-section">
-            {/* Theme Toggle */}
+          {/* Right cluster */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0" id="nav-auth-section">
             <button
+              type="button"
+              onClick={openSearch}
+              aria-label={t('nav.search')}
+              id="btn-open-search"
+              className="flex items-center gap-2 p-2.5 sm:px-3 rounded-xl border border-emerald-800/15 dark:border-amber-500/15 text-emerald-900/70 dark:text-amber-300 hover:border-amber-500/50 hover:bg-amber-400/10 transition-all cursor-pointer"
+            >
+              <Search className="w-4 h-4" />
+              <span className="hidden xl:inline text-xs font-semibold">{t('nav.search')}</span>
+              <kbd className="hidden xl:inline text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-900/5 dark:bg-white/10">Ctrl K</kbd>
+            </button>
+
+            <button
+              type="button"
               id="btn-theme-toggle"
               onClick={toggleTheme}
-              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              className="p-2.5 rounded-xl border border-emerald-800/15 dark:border-amber-500/15 text-emerald-900/70 dark:text-amber-300 hover:border-amber-500/50 hover:text-emerald-900 dark:hover:text-amber-200 hover:bg-amber-400/10 transition-all cursor-pointer"
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="p-2.5 rounded-xl border border-emerald-800/15 dark:border-amber-500/15 text-emerald-900/70 dark:text-amber-300 hover:border-amber-500/50 hover:bg-amber-400/10 transition-all cursor-pointer"
             >
               <AnimatePresence mode="wait" initial={false}>
-                <motion.span
-                  key={theme}
-                  initial={{ opacity: 0, rotate: -90, scale: 0.6 }}
-                  animate={{ opacity: 1, rotate: 0, scale: 1 }}
-                  exit={{ opacity: 0, rotate: 90, scale: 0.6 }}
-                  transition={{ duration: 0.2 }}
-                  className="block"
-                >
-                  {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                <motion.span key={theme} initial={{ opacity: 0, rotate: -90, scale: 0.6 }} animate={{ opacity: 1, rotate: 0, scale: 1 }} exit={{ opacity: 0, rotate: 90, scale: 0.6 }} transition={{ duration: 0.18 }} className="block">
+                  {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </motion.span>
               </AnimatePresence>
             </button>
 
-            {/* Language Switcher */}
-            <div className="relative">
+            <div className="relative hidden sm:block">
               <button
+                type="button"
                 id="btn-lang-switch"
-                onClick={() => setLangMenuOpen((v) => !v)}
-                title={t('nav.language')}
-                className="flex items-center space-x-1 px-2.5 py-2 rounded-xl text-[11px] font-bold border border-emerald-800/15 text-emerald-900/70 hover:border-amber-500/50 hover:text-emerald-900 hover:bg-amber-400/10 transition-all cursor-pointer"
+                onClick={() => setLangOpen((v) => !v)}
+                aria-label={t('nav.language')}
+                aria-expanded={langOpen}
+                className="flex items-center gap-1.5 px-2.5 py-2.5 rounded-xl text-[11px] font-bold border border-emerald-800/15 dark:border-amber-500/15 text-emerald-900/70 dark:text-amber-300 hover:border-amber-500/50 hover:bg-amber-400/10 transition-all cursor-pointer"
               >
-                <Languages className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{languageOptions.find((l) => l.code === language)?.label}</span>
+                <Languages className="w-4 h-4" />
+                <span className="hidden md:inline">{languageOptions.find((l) => l.code === language)?.label}</span>
               </button>
               <AnimatePresence>
-                {langMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-36 bg-white dark:bg-emerald-950 rounded-xl shadow-xl border border-emerald-800/10 dark:border-amber-500/15 overflow-hidden py-1 z-50"
-                  >
+                {langOpen && (
+                  <motion.div initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: 0.15 }} className="absolute right-0 mt-2 w-36 bg-white dark:bg-emerald-950 rounded-xl shadow-xl border border-emerald-800/10 dark:border-amber-500/15 overflow-hidden py-1 z-50">
                     {languageOptions.map((opt) => (
                       <button
                         key={opt.code}
-                        onClick={() => { setLanguage(opt.code); setLangMenuOpen(false); }}
-                        className={`w-full text-left px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
-                          language === opt.code ? 'text-emerald-900 dark:text-amber-400 bg-amber-400/10' : 'text-emerald-900/70 dark:text-emerald-100/70 hover:bg-emerald-800/5 dark:hover:bg-amber-400/10'
-                        }`}
+                        type="button"
+                        onClick={() => {
+                          setLanguage(opt.code);
+                          setLangOpen(false);
+                        }}
+                        className={`w-full text-left px-3.5 py-2 text-xs font-semibold cursor-pointer ${language === opt.code ? 'text-emerald-900 dark:text-amber-400 bg-amber-400/10' : 'text-emerald-900/70 dark:text-emerald-100/70 hover:bg-emerald-800/5 dark:hover:bg-amber-400/10'}`}
                       >
                         {opt.label}
                       </button>
@@ -162,94 +166,75 @@ export default function Navbar({ user, currentTab, setTab, onLogout }: NavbarPro
             </div>
 
             {user ? (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-1.5">
                 {user.role === 'ADMIN' && (
-                  <button
-                    id="btn-admin-nav"
-                    onClick={() => setTab('admin')}
-                    className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-amber-500/40 bg-amber-400/10 text-amber-700 hover:bg-amber-500 hover:text-white transition-all cursor-pointer ${
-                      currentTab === 'admin' ? 'bg-amber-500 text-white' : ''
-                    }`}
-                  >
-                    <ShieldAlert className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{t('nav.admin')}</span>
-                  </button>
+                  <Link href="/admin" id="btn-admin-nav" aria-label={t('nav.admin')} className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold border border-amber-500/40 bg-amber-400/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500 hover:text-white transition-all ${pathname.startsWith('/admin') ? 'bg-amber-500 !text-white' : ''}`}>
+                    <ShieldAlert className="w-4 h-4" />
+                    <span className="hidden md:inline">{t('nav.admin')}</span>
+                  </Link>
                 )}
-                <button
-                  id="btn-member-nav"
-                  onClick={() => setTab('dashboard')}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-950 border border-emerald-900 text-white hover:border-amber-400 transition-all cursor-pointer ${
-                    currentTab === 'dashboard' ? 'ring-2 ring-amber-400/60' : ''
-                  }`}
-                >
-                  <img
-                    src={mediaUrl(user.avatarUrl) || '/logoIUJJ.jpg'}
-                    alt={user.name}
-                    className="w-5 h-5 rounded-full border border-amber-400"
-                  />
-                  <span className="max-w-[100px] truncate hidden sm:inline">{user.name.split(' ')[0]}</span>
-                </button>
-                <button
-                  id="btn-logout"
-                  onClick={onLogout}
-                  title={t('nav.logout')}
-                  className="p-2 rounded-xl text-emerald-900/60 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
-                >
+                <Link href="/dashboard" id="btn-member-nav" className={`flex items-center gap-2 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold bg-emerald-950 border border-emerald-900 text-white hover:border-amber-400 transition-all ${pathname.startsWith('/dashboard') ? 'ring-2 ring-amber-400/60' : ''}`}>
+                  <img src={mediaUrl(user.avatarUrl) || '/logoIUJJ.jpg'} alt="" className="w-5 h-5 rounded-full border border-amber-400 object-cover" />
+                  <span className="max-w-[90px] truncate hidden md:inline">{user.name.split(' ')[0]}</span>
+                </Link>
+                <button type="button" id="btn-logout" onClick={logout} title={t('nav.logout')} aria-label={t('nav.logout')} className="hidden sm:block p-2.5 rounded-xl text-emerald-900/60 dark:text-emerald-100/60 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500 transition-colors cursor-pointer">
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
             ) : (
-              <button
-                id="btn-login-tab"
-                onClick={() => setTab('login')}
-                className="flex items-center space-x-1.5 px-4 sm:px-4.5 py-2.5 rounded-xl text-xs font-bold gold-gradient-bg text-emerald-950 shadow-md hover:shadow-lg hover:shadow-amber-500/25 transition-all active:scale-95 cursor-pointer"
-              >
-                <User className="w-4 h-4" />
-                <span>{t('nav.login')}</span>
-              </button>
+              <Link href="/login" id="btn-login-tab" className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-bold gold-gradient-bg text-emerald-950 shadow-md hover:shadow-lg hover:shadow-amber-500/25 transition-all active:scale-95">
+                <UserIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('nav.login')}</span>
+              </Link>
             )}
 
-            {/* Mobile Hamburger Button */}
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden p-2 rounded-xl text-emerald-900 hover:bg-emerald-800/10 transition-colors cursor-pointer"
-              aria-label="Toggle Navigation Menu"
+              type="button"
+              onClick={() => setMobileOpen((v) => !v)}
+              className="lg:hidden p-2.5 rounded-xl text-emerald-900 dark:text-amber-300 hover:bg-emerald-800/10 dark:hover:bg-amber-400/10 transition-colors cursor-pointer"
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-nav-panel"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
-
         </div>
 
-        {/* Mobile Animated Slide-out or Dropdown Panel */}
         <AnimatePresence>
-          {mobileMenuOpen && (
+          {mobileOpen && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="xl:hidden mt-2 bg-white/95 dark:bg-emerald-950/95 backdrop-blur-xl rounded-2xl shadow-xl border border-emerald-800/10 dark:border-amber-500/15 overflow-hidden"
               id="mobile-nav-panel"
+              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:hidden mt-2 bg-white/95 dark:bg-emerald-950/95 backdrop-blur-xl rounded-2xl shadow-xl border border-emerald-800/10 dark:border-amber-500/15 overflow-hidden"
             >
-              <div className="px-4 py-4 space-y-1.5">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleMobileNavClick(item.id)}
-                      className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                        isSelected(item.id)
-                          ? 'bg-amber-400/15 text-emerald-900 dark:text-amber-400 border-l-4 border-amber-500'
-                          : 'text-emerald-900/70 dark:text-emerald-100/70 hover:bg-emerald-800/5 dark:hover:bg-amber-400/10'
-                      }`}
+              <div className="p-3 space-y-1">
+                {navItems.map((item, i) => (
+                  <motion.div key={item.href} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.03 * i, duration: 0.2 }}>
+                    <Link
+                      href={item.href}
+                      aria-current={isActive(item.href) ? 'page' : undefined}
+                      className={`block w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all ${isActive(item.href) ? 'bg-amber-400/15 text-emerald-900 dark:text-amber-400 border-l-4 border-amber-500' : 'text-emerald-900/75 dark:text-emerald-100/75 hover:bg-emerald-800/5 dark:hover:bg-amber-400/10'}`}
                     >
-                      <Icon className="w-4 h-4" />
-                      <span>{item.label}</span>
+                      {item.label}
+                    </Link>
+                  </motion.div>
+                ))}
+                <div className="flex items-center gap-2 pt-2 mt-1 border-t border-emerald-800/10 dark:border-amber-500/10">
+                  {languageOptions.map((opt) => (
+                    <button key={opt.code} type="button" onClick={() => setLanguage(opt.code)} className={`flex-1 py-2 rounded-lg text-[11px] font-bold cursor-pointer ${language === opt.code ? 'bg-amber-400/20 text-emerald-900 dark:text-amber-300' : 'text-emerald-900/60 dark:text-emerald-100/60'}`}>
+                      {opt.label}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
+                {user && (
+                  <button type="button" onClick={logout} className="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer">
+                    <LogOut className="w-4 h-4" /> {t('nav.logout')}
+                  </button>
+                )}
               </div>
             </motion.div>
           )}

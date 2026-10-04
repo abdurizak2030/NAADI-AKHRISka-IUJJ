@@ -31,23 +31,8 @@ export interface Achievement {
 
 export type ArticleStatus = 'DRAFT' | 'PENDING' | 'PUBLISHED';
 
-export interface Article {
-  id: string;
-  title: string;
-  content: string;
-  summary: string;
-  authorName: string;
-  authorId: string;
-  category: string; // e.g. "Islamic Literature", "Somali History", "Analytical Reading"
-  language: 'Somali' | 'Arabic' | 'English';
-  status: ArticleStatus;
-  publishedAt?: string;
-  createdAt: string;
-  likesCount: number;
-  commentsCount: number;
-  imageUrl?: string;
-  likedByCurrentUser?: boolean;
-}
+// Single source of truth for the Article shape lives in src/types.ts.
+export type { Article } from '../../types';
 
 export interface Comment {
   id: string;

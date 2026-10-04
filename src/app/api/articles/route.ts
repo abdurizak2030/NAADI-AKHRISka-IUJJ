@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireDbReady, handleError, safeJsonBody } from '@/lib/server/route-helpers';
 import { getAuthPayload, requireAuth } from '@/lib/server/auth';
-import { createArticle, listArticles } from '@/lib/server/repositories/articles.repository';
+import { createArticle, listArticleCards, listArticles, normalizeTags } from '@/lib/server/repositories/articles.repository';
+import { revalidateArticles } from '@/lib/server/revalidate';
+import { notifyFollowersOfPublishedArticle } from '@/lib/server/repositories/subscribers.repository';
 import { addAuditLog } from '@/lib/server/repositories/audit.repository';
 import { createNotification, getArticleSettings } from '@/lib/server/repositories/content.repository';
 import { listUsers } from '@/lib/server/repositories/user.repository';
@@ -16,7 +18,13 @@ function sanitizeArticlePayload(body: Record<string, unknown>) {
     typeof body.language === 'string' && ['Somali', 'Arabic', 'English'].includes(body.language) ? body.language : 'Somali';
   const status = body.status === 'PUBLISHED' ? 'PUBLISHED' : body.status === 'PENDING' ? 'PENDING' : 'DRAFT';
   const imageUrl = typeof body.imageUrl === 'string' && body.imageUrl.trim() ? body.imageUrl.trim() : undefined;
-  return { title, content, summary, category, language, status, imageUrl };
+  const slug = typeof body.slug === 'string' ? body.slug.trim() : '';
+  const tags = normalizeTags(body.tags);
+  const seoTitle = typeof body.seoTitle === 'string' ? body.seoTitle.trim().slice(0, 120) : '';
+  const seoDescription = typeof body.seoDescription === 'string' ? body.seoDescription.trim().slice(0, 300) : '';
+  const ogImageUrl = typeof body.ogImageUrl === 'string' && body.ogImageUrl.trim() ? body.ogImageUrl.trim() : undefined;
+  const featured = body.featured === true;
+  return { title, content, summary, category, language, status, imageUrl, slug, tags, seoTitle, seoDescription, ogImageUrl, featured };
 }
 
 async function notifyAdminsOfPendingArticle(articleTitle: string, authorName: string) {
@@ -41,6 +49,29 @@ export async function GET(request: NextRequest) {
   if (notReady) return notReady;
 
   try {
+    // Paged, lightweight card list (no article bodies) — used by the public
+    // Articles page and "load more". The legacy full list below is kept for
+    // the member dashboard and admin console.
+    const sp = request.nextUrl.searchParams;
+    if (sp.has('page')) {
+      const page = Math.max(Number(sp.get('page')) || 1, 1);
+      const pageSize = Math.min(Math.max(Number(sp.get('limit')) || 9, 1), 30);
+      const { items, total } = await listArticleCards({
+        page,
+        pageSize,
+        category: sp.get('category') || undefined,
+        language: sp.get('language') || undefined,
+        author: sp.get('author') || undefined,
+        tag: sp.get('tag') || undefined,
+        q: sp.get('q') || undefined,
+        featured: sp.get('featured') === '1',
+      });
+      return NextResponse.json(
+        { items, total, page, pageSize, hasMore: page * pageSize < total },
+        { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300' } }
+      );
+    }
+
     const auth = getAuthPayload(request);
     const likeUserKey = getArticleLikeUserKey(request, auth);
     const publishedOnly = request.nextUrl.searchParams.get('status') === 'PUBLISHED';
@@ -72,7 +103,7 @@ export async function POST(request: NextRequest) {
   try {
     const payload = auth.payload;
     const body = await safeJsonBody(request);
-    const { title, content, summary, category, language, status, imageUrl } = sanitizeArticlePayload(body);
+    const { title, content, summary, category, language, status, imageUrl, slug, tags, seoTitle, seoDescription, ogImageUrl, featured } = sanitizeArticlePayload(body);
 
     if (!title || !content) {
       return NextResponse.json({ error: 'Fadlan buuxi cinwaanka iyo qormada.' }, { status: 400 });
@@ -102,6 +133,12 @@ export async function POST(request: NextRequest) {
       authorId: payload.userId,
       authorName: payload.name,
       imageUrl,
+      slug,
+      tags,
+      seoTitle,
+      seoDescription,
+      ogImageUrl,
+      featured: payload.role === 'ADMIN' ? featured : false,
     });
 
     addAuditLog(payload.userId, payload.name, 'CREATE_ARTICLE', `Lagu qoray maqaal cusub: ${title}`);
@@ -117,6 +154,9 @@ export async function POST(request: NextRequest) {
       ]);
     }
 
+    if (articleStatus === 'PUBLISHED') await notifyFollowersOfPublishedArticle(article);
+
+    revalidateArticles(article.slug);
     return NextResponse.json(article, { status: 201 });
   } catch (err) {
     return handleError(err, 'POST /api/articles');

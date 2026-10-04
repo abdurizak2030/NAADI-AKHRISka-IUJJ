@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireDbReady, handleError, safeJsonBody } from '@/lib/server/route-helpers';
 import { requireAuth } from '@/lib/server/auth';
-import { deleteArticle, getArticleById, updateArticle } from '@/lib/server/repositories/articles.repository';
+import { deleteArticle, getArticleById, normalizeTags, updateArticle } from '@/lib/server/repositories/articles.repository';
+import { revalidateArticles } from '@/lib/server/revalidate';
+import { notifyFollowersOfPublishedArticle } from '@/lib/server/repositories/subscribers.repository';
 import { addAuditLog } from '@/lib/server/repositories/audit.repository';
 import { createNotification, getArticleSettings } from '@/lib/server/repositories/content.repository';
 import { listUsers } from '@/lib/server/repositories/user.repository';
@@ -55,6 +57,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         : null
       : undefined;
 
+    const slug = typeof body?.slug === 'string' ? body.slug.trim() : undefined;
+    const tags = hasOwn('tags') ? normalizeTags(body.tags) : undefined;
+    const seoTitle = hasOwn('seoTitle') ? (typeof body.seoTitle === 'string' ? body.seoTitle.trim().slice(0, 120) : '') : undefined;
+    const seoDescription = hasOwn('seoDescription') ? (typeof body.seoDescription === 'string' ? body.seoDescription.trim().slice(0, 300) : '') : undefined;
+    const ogImageUrl = hasOwn('ogImageUrl') ? (typeof body.ogImageUrl === 'string' ? body.ogImageUrl.trim() || null : null) : undefined;
+    // Only admins may feature content.
+    const featured = payload.role === 'ADMIN' && typeof body?.featured === 'boolean' ? body.featured : undefined;
+
     if (title !== undefined && title.length > 140) {
       return NextResponse.json({ error: 'Titlka wuu ka dheeraaday xadka ugu badan.' }, { status: 400 });
     }
@@ -74,13 +84,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Only admins can approve and publish articles.' }, { status: 403 });
     }
 
-    const hasContentEdit = [title, content, summary, category, language, imageUrl].some((value) => value !== undefined);
+    const hasContentEdit = [title, content, summary, category, language, imageUrl, slug, tags, seoTitle, seoDescription, ogImageUrl].some((value) => value !== undefined);
     const nextStatus =
       payload.role === 'ADMIN'
         ? requestedStatus
         : requestedStatus ?? (existing.status === 'PUBLISHED' && hasContentEdit && articleSettings.articlePublishingEnabled ? 'PENDING' : undefined);
 
-    const article = await updateArticle(id, { title, content, summary, category, language, status: nextStatus, imageUrl });
+    const article = await updateArticle(id, { title, content, summary, category, language, status: nextStatus, imageUrl, slug, tags, seoTitle, seoDescription, ogImageUrl, featured });
     if (!article) return NextResponse.json({ error: 'Maqaalka lama helin.' }, { status: 404 });
 
     addAuditLog(payload.userId, payload.name, 'EDIT_ARTICLE', `Waxaa wax ka beddel lagu sameeyey maqaalka: ${article.title}`);
@@ -103,6 +113,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
+    if (nextStatus === 'PUBLISHED' && existing.status !== 'PUBLISHED') {
+      await notifyFollowersOfPublishedArticle(article);
+    }
+
     if (payload.role !== 'ADMIN' && nextStatus === 'PENDING' && existing.status !== 'PENDING') {
       await Promise.all([
         notifyAdminsOfPendingArticle(article.title, payload.name),
@@ -114,6 +128,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       ]);
     }
 
+    revalidateArticles();
     return NextResponse.json(article);
   } catch (err) {
     return handleError(err, 'PUT /api/articles/[id]');
@@ -139,6 +154,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
 
     await deleteArticle(id);
+    revalidateArticles();
     addAuditLog(payload.userId, payload.name, 'DELETE_ARTICLE', `Loo tirtiray maqaal: ${existing.title}`);
     return NextResponse.json({ success: true });
   } catch (err) {

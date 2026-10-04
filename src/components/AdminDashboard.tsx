@@ -39,6 +39,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ImageCropModal from './ImageCropModal';
+import { CommentsTab, FollowersTab, TaxonomyTab } from './AdminExtras';
+import { parseVideoLink } from '../lib/video';
+import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
 import {
   Article,
   ArticleStatus,
@@ -70,7 +74,7 @@ interface AdminDashboardProps {
   onRefreshAll: () => void;
 }
 
-type Tab = 'overview' | 'users' | 'articles' | 'library' | 'events' | 'media' | 'community' | 'messages' | 'settings';
+type Tab = 'overview' | 'users' | 'articles' | 'comments' | 'followers' | 'taxonomy' | 'library' | 'events' | 'media' | 'community' | 'messages' | 'settings';
 type MediaSubTab = 'videos' | 'gallery';
 
 interface OverviewData {
@@ -261,7 +265,7 @@ export default function AdminDashboard({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10" id="admin-dashboard-root">
+    <div className="redesigned-page px-4 sm:px-6 lg:px-8" id="admin-dashboard-root">
       <div className="mb-8">
         <div className="flex items-center gap-2 text-amber-600 mb-2">
           <ShieldCheck size={18} />
@@ -277,6 +281,9 @@ export default function AdminDashboard({
         <TabButton active={tab === 'overview'} onClick={() => setTab('overview')} icon={LayoutDashboard} label="Dashboard" />
         <TabButton active={tab === 'users'} onClick={() => setTab('users')} icon={Users} label="Users" />
         <TabButton active={tab === 'articles'} onClick={() => setTab('articles')} icon={BookOpen} label="Articles" />
+        <TabButton active={tab === 'taxonomy'} onClick={() => setTab('taxonomy')} icon={Star} label="Categories & Authors" />
+        <TabButton active={tab === 'comments'} onClick={() => setTab('comments')} icon={Mail} label="Comments" />
+        <TabButton active={tab === 'followers'} onClick={() => setTab('followers')} icon={Users} label="Followers" />
         <TabButton active={tab === 'library'} onClick={() => setTab('library')} icon={Library} label="Library" />
         <TabButton active={tab === 'events'} onClick={() => setTab('events')} icon={CalendarDays} label="Events" />
         <TabButton active={tab === 'media'} onClick={() => setTab('media')} icon={ImageIcon} label="Media" />
@@ -294,6 +301,10 @@ export default function AdminDashboard({
       {tab === 'articles' && (
         <ArticlesTab token={token} articles={articles} onChanged={refresh} openModal={setModal} />
       )}
+
+      {tab === 'comments' && <CommentsTab token={token} />}
+      {tab === 'followers' && <FollowersTab token={token} />}
+      {tab === 'taxonomy' && <TaxonomyTab token={token} />}
 
       {tab === 'library' && <LibraryTab token={token} pdfs={pdfs} onChanged={refresh} openModal={setModal} />}
 
@@ -716,6 +727,10 @@ function ArticlesTab({
   onChanged: () => void;
   openModal: (m: { type: string; data?: unknown } | null) => void;
 }) {
+  const patchArticle = async (a: Article, body: Record<string, unknown>) => {
+    await fetch(`${API_BASE_URL}/api/articles/${a.id}`, { method: 'PUT', headers: authHeaders(token), body: JSON.stringify(body) });
+    onChanged();
+  };
   const remove = async (a: Article) => {
     if (!confirm(`Tirtir maqaalka "${a.title}"?`)) return;
     await fetch(`${API_BASE_URL}/api/articles/${a.id}`, { method: 'DELETE', headers: authHeaders(token, false) });
@@ -765,6 +780,18 @@ function ArticlesTab({
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1.5">
                     <button
+                      onClick={() => patchArticle(a, { status: a.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED' })}
+                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-emerald-800/20 text-emerald-800 hover:bg-emerald-50"
+                    >
+                      {a.status === 'PUBLISHED' ? 'Unpublish' : 'Publish'}
+                    </button>
+                    <button onClick={() => patchArticle(a, { featured: !a.featured })} aria-label={a.featured ? 'Remove from featured' : 'Feature article'} title={a.featured ? 'Featured' : 'Feature'} className="p-2 rounded-lg hover:bg-amber-50 text-amber-500">
+                      <Star size={15} className={a.featured ? 'fill-amber-400' : ''} />
+                    </button>
+                    {a.status === 'PUBLISHED' && (
+                      <Link href={`/articles/${a.slug}`} target="_blank" aria-label="View article" className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"><ExternalLink size={15} /></Link>
+                    )}
+                    <button
                       onClick={() => openModal({ type: 'article-edit', data: a })}
                       className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
                     >
@@ -802,6 +829,13 @@ function ArticleFormModal({
   const [language, setLanguage] = useState(existing?.language || 'Somali');
   const [status, setStatus] = useState(existing?.status || 'DRAFT');
   const [imageUrl, setImageUrl] = useState(existing?.imageUrl || '');
+  const [slug, setSlug] = useState(existing?.slug || '');
+  const [tags, setTags] = useState((existing?.tags || []).join(', '));
+  const [seoTitle, setSeoTitle] = useState(existing?.seoTitle || '');
+  const [seoDescription, setSeoDescription] = useState(existing?.seoDescription || '');
+  const [ogImageUrl, setOgImageUrl] = useState(existing?.ogImageUrl || '');
+  const [featured, setFeatured] = useState(existing?.featured || false);
+  const [uploadingOg, setUploadingOg] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -831,9 +865,12 @@ function ArticleFormModal({
     try {
       const url = existing ? `${API_BASE_URL}/api/articles/${existing.id}` : `${API_BASE_URL}/api/articles`;
       const method = existing ? 'PUT' : 'POST';
-      const body: Record<string, unknown> = { title, content, category, language, status };
+      const body: Record<string, unknown> = { title, content, category, language, status, tags, seoTitle, seoDescription, ogImageUrl, featured };
+      if (slug.trim()) body.slug = slug.trim();
       if (summary) body.summary = summary;
       if (imageUrl) body.imageUrl = imageUrl;
+      // Let admins clear the cover / summary when editing.
+      if (existing) { body.summary = summary; body.imageUrl = imageUrl; }
       const res = await fetch(url, {
         method,
         headers: authHeaders(token),
@@ -916,6 +953,47 @@ function ArticleFormModal({
             )}
           </div>
         </Field>
+        <details className="mb-4 rounded-xl border border-gray-200 p-4 open:bg-emerald-50/30">
+          <summary className="cursor-pointer text-sm font-bold text-emerald-900">SEO, sharing & publishing options</summary>
+          <div className="mt-4 space-y-1">
+            <Field label="URL slug (leave empty to generate from the title)">
+              <input className={inputClass} value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="importance-of-reading" />
+              {existing && <p className="mt-1 text-[11px] text-amber-700">Changing the slug breaks links that were already shared.</p>}
+            </Field>
+            <Field label="Tags (comma separated)">
+              <input className={inputClass} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="reading, history, faith" />
+            </Field>
+            <Field label={`SEO title (${seoTitle.length}/60)`}>
+              <input className={inputClass} maxLength={120} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} placeholder="Defaults to the article title" />
+            </Field>
+            <Field label={`SEO / social description (${seoDescription.length}/160)`}>
+              <textarea className={inputClass} rows={2} maxLength={300} value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} placeholder="Defaults to the summary" />
+            </Field>
+            <Field label="Social sharing image (1200×630 recommended; defaults to the cover)">
+              <div className="flex items-center gap-3 flex-wrap">
+                {ogImageUrl && <img loading="lazy" src={mediaUrl(ogImageUrl)} alt="Sharing preview" className="w-24 h-12 rounded-lg object-cover border border-gray-200" />}
+                <label className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold border cursor-pointer bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100">
+                  {uploadingOg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
+                  <span>{ogImageUrl ? 'Replace' : 'Upload sharing image'}</span>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={uploadingOg} onChange={async (e) => {
+                    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
+                    setUploadingOg(true);
+                    try {
+                      const fd = new FormData(); fd.append('file', file);
+                      const res = await fetch(`${API_BASE_URL}/api/uploads/image`, { method: 'POST', headers: authHeaders(token, false), body: fd });
+                      const data = await res.json();
+                      if (res.ok) setOgImageUrl(data.url); else setError(data.error || 'Image upload failed.');
+                    } finally { setUploadingOg(false); }
+                  }} />
+                </label>
+                {ogImageUrl && <button type="button" onClick={() => setOgImageUrl('')} className="text-[11px] font-bold text-red-500 cursor-pointer">Remove</button>}
+              </div>
+            </Field>
+            <label className="flex items-center gap-2 text-sm font-semibold text-emerald-900 pt-1 cursor-pointer">
+              <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} /> Feature this article
+            </label>
+          </div>
+        </details>
         <SubmitButton loading={loading} label={existing ? 'Save Changes' : 'Create Article'} />
       </form>
     </Modal>
@@ -1594,7 +1672,11 @@ function VideoFormModal({
     try {
       const url = existing ? `${API_BASE_URL}/api/videos/${existing.id}` : `${API_BASE_URL}/api/videos`;
       const method = existing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: authHeaders(token), body: JSON.stringify(form) });
+      const link = parseVideoLink(form.youtubeId || '');
+      const payload = link.youtubeId || link.videoUrl
+        ? { ...form, youtubeId: link.youtubeId, videoUrl: link.videoUrl || (link.youtubeId ? '' : form.videoUrl) }
+        : form;
+      const res = await fetch(url, { method, headers: authHeaders(token), body: JSON.stringify(payload) });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || 'Wax baa qaldamay.');
@@ -1622,13 +1704,18 @@ function VideoFormModal({
             onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
         </Field>
-        <Field label="YouTube video ID (leave empty if using direct file below)">
+        <Field label="YouTube or Facebook video link (leave empty if uploading a file below)">
           <input
             className={inputClass}
-            placeholder="tusaale: dQw4w9WgXcQ"
-            value={form.youtubeId}
-            onChange={(e) => setForm({ ...form, youtubeId: e.target.value })}
+            placeholder="https://youtu.be/dQw4w9WgXcQ  or  https://www.facebook.com/…/videos/…"
+            value={form.youtubeId || (/facebook\.com|fb\.watch/i.test(form.videoUrl || '') ? form.videoUrl : '')}
+            onChange={(e) => {
+              const parsed = parseVideoLink(e.target.value);
+              // Keep the raw text while typing; normalise to {youtubeId | videoUrl} on submit.
+              setForm({ ...form, youtubeId: parsed.youtubeId || e.target.value, videoUrl: parsed.youtubeId ? '' : form.videoUrl });
+            }}
           />
+          <p className="mt-1 text-[11px] text-gray-400">Videos play inside the site. For Facebook, the video must be public.</p>
         </Field>
         <Field label="Direct video file — upload from your computer (.mp4, .webm, .mov, up to 300MB)">
           <div className="flex items-center gap-3">

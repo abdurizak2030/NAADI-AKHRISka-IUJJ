@@ -56,6 +56,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const { id } = await params;
     const body = (await safeJsonBody(request)) as Record<string, unknown>;
+    // Honeypot: real visitors never fill this hidden field. Pretend success so bots learn nothing.
+    if (typeof body.website === 'string' && body.website.trim()) {
+      return NextResponse.json({ id: 'ignored', articleId: id, authorName: 'Guest', authorId: 'guest', content: '', createdAt: new Date().toISOString() }, { status: 201 });
+    }
     const { authorName, commenterEmail, content } = sanitizeCommentPayload(body);
     const validationError = validateComment(authorName, commenterEmail, content);
     if (validationError) {

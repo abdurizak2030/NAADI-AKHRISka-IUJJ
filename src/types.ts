@@ -47,6 +47,59 @@ export interface Article {
   commentsCount: number;
   imageUrl?: string;
   likedByCurrentUser?: boolean;
+  /** SEO-friendly URL segment: /articles/<slug> */
+  slug: string;
+  tags: string[];
+  seoTitle?: string;
+  seoDescription?: string;
+  /** Dedicated social-sharing image; falls back to the cover image. */
+  ogImageUrl?: string;
+  viewsCount: number;
+  sharesCount: number;
+  featured: boolean;
+  readingMinutes: number;
+}
+
+export interface ArticlePage {
+  items: Article[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export interface TaxonomyEntry {
+  name: string;
+  count: number;
+}
+
+export type FollowKind = 'all' | 'author' | 'category';
+
+export interface FollowRecord {
+  kind: FollowKind;
+  value: string;
+}
+
+export interface SubscriberRecord {
+  id: string;
+  email: string;
+  kind: FollowKind;
+  value: string;
+  userId?: string;
+  createdAt: string;
+}
+
+export type SearchResultType = 'article' | 'book' | 'video';
+
+export interface SearchResult {
+  id: string;
+  type: SearchResultType;
+  title: string;
+  description: string;
+  category: string;
+  imageUrl?: string;
+  date?: string;
+  href: string;
 }
 
 export interface Comment {

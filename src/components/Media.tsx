@@ -5,7 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { mediaUrl } from '../lib/api';
 import { Play, Video, User, Radio, X, Images, ZoomIn } from 'lucide-react';
 import { VideoItem, GalleryItem } from '../types';
@@ -28,6 +29,14 @@ export default function Media({ videos, gallery }: MediaProps) {
   const [openVideo, setOpenVideo] = useState<VideoItem | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<GalleryItem | null>(null);
   const { t } = useLanguage();
+  const deepLinked = useSearchParams()?.get('v');
+
+  // /videos?v=<id> (from global search) opens that video straight away.
+  useEffect(() => {
+    if (!deepLinked) return;
+    const match = videos.find((v) => v.id === deepLinked);
+    if (match) setOpenVideo(match);
+  }, [deepLinked, videos]);
 
   const handleOpenVideo = (video: VideoItem) => {
     setOpenVideo(video);

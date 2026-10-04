@@ -43,6 +43,20 @@ async function ensureBooted(): Promise<void> {
 }
 
 /**
+ * For Server Components (public pages): boots the DB if needed and reports
+ * whether it is usable. Pages use this to degrade gracefully (empty state)
+ * instead of crashing when the database is unreachable.
+ */
+export async function ensureDatabase(): Promise<boolean> {
+  try {
+    await ensureBooted();
+    return isDatabaseReady() && isSchemaReady();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Equivalent of the `/api` DB-readiness gate in app.ts. Call at the top of
  * every database-backed route; returns a NextResponse to return early if
  * the database/schema isn't ready, or `null` if it's safe to proceed.

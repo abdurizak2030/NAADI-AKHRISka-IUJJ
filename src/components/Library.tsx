@@ -6,6 +6,8 @@
  */
 
 import React, { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useApp } from './AppProvider';
 import { Library, Search, Download, BookOpen, FileText, Globe, Check, Eye, X } from 'lucide-react';
 import { PdfBook } from '../types';
 import { mediaUrl } from '../lib/api';
@@ -14,13 +16,14 @@ import { useLanguage } from '../i18n/LanguageContext';
 
 interface LibraryProps {
   pdfs: PdfBook[];
-  token: string | null;
-  onLoginPrompt: () => void;
 }
 
-export default function LibraryView({ pdfs, token, onLoginPrompt }: LibraryProps) {
+export default function LibraryView({ pdfs }: LibraryProps) {
   const { t } = useLanguage();
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const { token } = useApp();
+  const router = useRouter();
+  const onLoginPrompt = () => router.push('/login');
+  const [searchQuery, setSearchQuery] = useState<string>(useSearchParams()?.get('q') ?? '');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [openBook, setOpenBook] = useState<PdfBook | null>(null);
@@ -153,7 +156,7 @@ export default function LibraryView({ pdfs, token, onLoginPrompt }: LibraryProps
               <div className="p-5.5 flex gap-4.5">
                 {/* Simulated Book Cover */}
                 <div className="w-24 h-32 bg-gradient-to-br from-emerald-900 to-emerald-950 rounded-xl shadow-md border-r-4 border-amber-400 flex flex-col justify-between p-3 flex-shrink-0 relative overflow-hidden text-white">
-                  {pdf.coverUrl && pdf.coverUrl !== '/logoIUJJ.jpg' && <img src={mediaUrl(pdf.coverUrl)} alt="" className="absolute inset-0 w-full h-full object-cover opacity-55" />}
+                  {pdf.coverUrl && pdf.coverUrl !== '/logoIUJJ.jpg' && <img loading="lazy" decoding="async" src={mediaUrl(pdf.coverUrl)} alt="" className="absolute inset-0 w-full h-full object-cover opacity-55" />}
                   <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:10px_10px]" />
                   <div className="relative text-[8px] font-bold text-amber-400 border-b border-amber-400/20 pb-1 uppercase tracking-widest truncate">
                     {pdf.category.split(' ')[0]}

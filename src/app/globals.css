@@ -161,3 +161,238 @@ html.dark body {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Refined shell for non-home views; the landing page and footer keep their existing styles. */
+.site-header {
+  padding-top: 0.75rem;
+}
+
+.site-nav {
+  max-width: 84rem;
+  margin-inline: auto;
+  border-color: rgba(11, 93, 42, 0.08);
+  border-radius: 1.25rem;
+  box-shadow: 0 12px 36px -24px rgba(15, 43, 29, 0.38);
+}
+
+.redesigned-page {
+  width: 100%;
+  max-width: 84rem;
+  min-height: calc(100svh - 7rem);
+  padding-top: clamp(2rem, 4vw, 3.5rem);
+  padding-bottom: clamp(3rem, 6vw, 5.5rem);
+  animation: page-enter 0.38s ease-out both;
+  isolation: isolate;
+}
+
+.redesigned-page #articles-header,
+.redesigned-page #library-header,
+.redesigned-page #events-header,
+.redesigned-page #media-header,
+.redesigned-page #contact-header {
+  border-bottom: 1px solid rgba(15, 93, 52, 0.1);
+  padding-bottom: 1.75rem;
+}
+
+.redesigned-page #articles-header h2,
+.redesigned-page #library-header h2,
+.redesigned-page #events-header h2,
+.redesigned-page #media-header h2,
+.redesigned-page #contact-header h2 {
+  color: #0b3c23;
+  font-size: clamp(1.9rem, 3.5vw, 2.6rem);
+  line-height: 1.12;
+}
+
+.redesigned-page h2 {
+  letter-spacing: -0.035em;
+}
+
+.redesigned-page input:not([type="checkbox"]),
+.redesigned-page textarea,
+.redesigned-page select {
+  border-radius: 0.9rem;
+  min-height: 2.9rem;
+  box-shadow: 0 2px 8px rgba(20, 45, 31, 0.025);
+}
+
+.redesigned-page button {
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.redesigned-page button:focus-visible,
+.site-header button:focus-visible,
+.site-header a:focus-visible {
+  outline: 3px solid rgba(212, 175, 55, 0.75);
+  outline-offset: 3px;
+}
+
+.redesigned-page #library-books-grid > div,
+.redesigned-page #videos-grid > div,
+.redesigned-page #gallery-grid > *,
+.redesigned-page #events-list-grid > div,
+.redesigned-page #articles-list-grid > div {
+  border-radius: 1.25rem;
+  box-shadow: 0 12px 34px -27px rgba(9, 54, 29, 0.55);
+}
+
+.redesigned-page #library-books-grid > div,
+.redesigned-page #videos-grid > div,
+.redesigned-page #gallery-grid > *,
+.redesigned-page #events-list-grid > div,
+.redesigned-page #articles-list-grid > div {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.redesigned-page #library-books-grid > div:hover,
+.redesigned-page #videos-grid > div:hover,
+.redesigned-page #gallery-grid > *:hover,
+.redesigned-page #events-list-grid > div:hover,
+.redesigned-page #articles-list-grid > div:hover {
+  border-color: rgba(15, 123, 56, 0.28);
+  box-shadow: 0 20px 40px -28px rgba(9, 54, 29, 0.55);
+}
+
+.page-heading {
+  max-width: 48rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.page-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgba(15, 123, 56, 0.12);
+  border-radius: 999px;
+  background: #f1fdf6;
+  color: #0b5d2a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+}
+
+.page-heading h1 {
+  margin-top: 1.15rem;
+  color: #0b3c23;
+  font-family: var(--font-outfit), var(--font-inter), sans-serif;
+  font-size: clamp(2.25rem, 5vw, 3.65rem);
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  line-height: 1.05;
+}
+
+.page-heading p {
+  max-width: 42rem;
+  margin: 1rem auto 0;
+  color: #617168;
+  font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+  line-height: 1.75;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .redesigned-page {
+    animation: none;
+  }
+}
+
+
+/* ---------------------------------------------------------------------
+   Redesign additions
+   --------------------------------------------------------------------- */
+
+/* Loading skeletons (shimmer is pure CSS = no JS cost). */
+.skeleton {
+  background: linear-gradient(100deg, rgba(8, 71, 32, 0.07) 30%, rgba(212, 175, 55, 0.16) 50%, rgba(8, 71, 32, 0.07) 70%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s linear infinite;
+}
+.dark .skeleton {
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.05) 30%, rgba(212, 175, 55, 0.14) 50%, rgba(255, 255, 255, 0.05) 70%);
+  background-size: 200% 100%;
+}
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* Distraction-free reading typography. */
+.article-prose {
+  font-size: clamp(1.05rem, 0.98rem + 0.35vw, 1.2rem);
+  line-height: 1.85;
+  color: #2b3a31;
+  font-family: var(--font-inter), ui-serif, Georgia, serif;
+  overflow-wrap: anywhere;
+}
+.dark .article-prose { color: #d3e0d8; }
+.article-prose > * + * { margin-top: 1.4em; }
+.article-prose h2 { font-family: var(--font-outfit), sans-serif; font-weight: 800; font-size: 1.6em; line-height: 1.25; margin-top: 2.2em; color: #052e15; }
+.article-prose h3 { font-family: var(--font-outfit), sans-serif; font-weight: 700; font-size: 1.25em; margin-top: 1.8em; color: #084720; }
+.dark .article-prose h2, .dark .article-prose h3 { color: #eaf6ee; }
+.article-prose blockquote { border-inline-start: 4px solid #D4AF37; padding: 0.4em 1.2em; font-size: 1.1em; font-style: italic; color: #0b5d2a; background: rgba(212, 175, 55, 0.08); border-radius: 0 1rem 1rem 0; }
+.dark .article-prose blockquote { color: #e4cd81; }
+.article-prose ul { list-style: disc; padding-inline-start: 1.4em; }
+.article-prose li + li { margin-top: 0.4em; }
+.article-prose p.has-dropcap::first-letter { float: left; font-family: var(--font-outfit), sans-serif; font-weight: 800; font-size: 3.6em; line-height: 0.85; padding: 0.08em 0.12em 0 0; color: #0b5d2a; }
+.dark .article-prose p.has-dropcap::first-letter { color: #D4AF37; }
+
+/* Keyboard focus that is visible on every page, not only the legacy ones. */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: 2px solid #D4AF37;
+  outline-offset: 2px;
+}
+
+/* Keep the mobile action bar from covering the footer. */
+@media (max-width: 1023px) {
+  #club-footer { padding-bottom: 5.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}

@@ -7,11 +7,14 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { API_BASE_URL, mediaUrl } from '../lib/api';
-import { GraduationCap, Trophy, ArrowRight, Star, Clock, MapPin, Sparkles, Heart, MessageSquare } from 'lucide-react';
+import { mediaUrl } from '../lib/api';
+import { GraduationCap, Trophy, ArrowRight, Star, Clock, MapPin, Sparkles } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
-import { FounderInfo, MemberOfMonth, ClubEvent, User, Article, Testimonial } from '../types';
+import { FounderInfo, MemberOfMonth, ClubEvent, Article, Testimonial } from '../types';
 import { motion } from 'motion/react';
+import { useRouter } from 'next/navigation';
+import { useApp } from './AppProvider';
+import ArticleCard from './articles/ArticleCard';
 import CountdownTimer from './CountdownTimer';
 import TestimonialsSlider from './TestimonialsSlider';
 
@@ -19,14 +22,7 @@ interface HomeProps {
   founder: FounderInfo | null;
   memberOfMonth: MemberOfMonth | null;
   upcomingEvents: ClubEvent[];
-  setTab: (tab: string) => void;
-  onRegisterEvent: (eventId: string) => void;
-  userEmail?: string;
-  user: User | null;
   articles: Article[];
-  token: string | null;
-  onRefreshArticles: () => void;
-  setActiveArticle: (article: Article | null) => void;
   testimonials: Testimonial[];
 }
 
@@ -34,17 +30,14 @@ export default function Home({
   founder,
   memberOfMonth,
   upcomingEvents,
-  setTab,
-  onRegisterEvent: _onRegisterEvent,
-  userEmail: _userEmail,
-  user,
   articles,
-  token,
-  onRefreshArticles,
-  setActiveArticle,
   testimonials
 }: HomeProps) {
   const { t } = useLanguage();
+  const router = useRouter();
+  const { user } = useApp();
+  const routes: Record<string, string> = { about: '/about', dashboard: '/dashboard', login: '/login', articles: '/articles', events: '/events' };
+  const setTab = (tab: string) => router.push(routes[tab] ?? '/');
 
   // Framer Motion Animation Settings
   const containerVariants = {
@@ -195,77 +188,14 @@ export default function Home({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {articles.filter(a => a.status === 'PUBLISHED').slice(0, 3).map((art) => (
-            <motion.div
-              whileHover={{ y: -6 }}
-              key={art.id}
-              onClick={() => {
-                setActiveArticle(art);
-                setTab('articles');
-              }}
-              className="bg-white rounded-2xl border border-gray-100 hover:border-emerald-800/25 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
-            >
-              <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-amber-600 bg-amber-400/10 px-2.5 py-1 rounded-full border border-amber-400/20 uppercase tracking-wider">
-                    {art.category}
-                  </span>
-                  <span className="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wider">
-                    {art.language}
-                  </span>
-                </div>
-
-                <h3 className="text-base font-bold text-emerald-950 font-sans line-clamp-2 leading-snug">
-                  {art.title}
-                </h3>
-                
-                <p className="text-gray-500 text-xs sm:text-sm line-clamp-3 leading-relaxed">
-                  {art.summary}
-                </p>
-              </div>
-
-              {/* Footer details */}
-              <div className="px-6 py-4 bg-emerald-50/20 rounded-b-2xl border-t border-gray-50/80 flex items-center justify-between text-[11px] text-gray-500">
-                <div className="flex items-center space-x-2">
-                  <div className="w-5.5 h-5.5 rounded-full bg-emerald-900 border border-amber-400/40 flex items-center justify-center text-[10px] text-amber-300 font-bold shrink-0">
-                    {art.authorName.charAt(0)}
-                  </div>
-                  <span className="truncate max-w-[110px] font-semibold text-emerald-950">{art.authorName}</span>
-                </div>
-
-                <div className="flex items-center gap-3 text-[10px] font-bold font-mono text-gray-400">
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      try {
-                        const headers: Record<string, string> = {};
-                        if (token) {
-                          headers['Authorization'] = `Bearer ${token}`;
-                        }
-                        const res = await fetch(`${API_BASE_URL}/api/articles/${art.id}/like`, {
-                          method: 'POST',
-                          headers
-                        });
-                        if (res.ok) {
-                          onRefreshArticles();
-                        }
-                      } catch (err) {
-                        console.error(err);
-                      }
-                    }}
-                    className="flex items-center gap-1 hover:text-red-500 transition-colors"
-                  >
-                    <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500/10" />
-                    <span>{art.likesCount}</span>
-                  </button>
-                  <div className="flex items-center gap-1 text-emerald-800">
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>{art.commentsCount}</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+          {articles.slice(0, 3).map((art) => (
+            <ArticleCard key={art.id} article={art} />
           ))}
+        </div>
+        <div className="text-center">
+          <button type="button" onClick={() => setTab('articles')} className="inline-flex items-center gap-2 rounded-xl bg-emerald-900 px-7 py-3 text-sm font-bold text-amber-300 transition hover:bg-emerald-800 cursor-pointer">
+            {t('ui.viewAll')} <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       </motion.section>
 

@@ -11,6 +11,7 @@
  */
 
 import { getPool } from './pool';
+import { makeUniqueSlug } from '../utils/slug';
 import { getAdminSeed, getClubSettingsSeed, getFounderSeed, getMemberOfMonthSeed } from '../config/seed';
 
 let ensurePromise: Promise<void> | null = null;
@@ -132,6 +133,56 @@ async function runSchemaSetup(): Promise<void> {
       CREATE INDEX IF NOT EXISTS articles_status_idx ON articles (status);
       CREATE INDEX IF NOT EXISTS articles_created_idx ON articles (created_at DESC);
     `);
+
+    // Article platform upgrade: SEO-friendly slugs, tags, social/SEO metadata,
+    // engagement counters and the "featured" flag. Every statement is
+    // additive + idempotent so existing databases upgrade in place.
+    await pool.query(`
+      ALTER TABLE articles ADD COLUMN IF NOT EXISTS slug TEXT;
+      ALTER TABLE articles ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
+      ALTER TABLE articles ADD COLUMN IF NOT EXISTS seo_title TEXT;
+      ALTER TABLE articles ADD COLUMN IF NOT EXISTS seo_description TEXT;
+      ALTER TABLE articles ADD COLUMN IF NOT EXISTS og_image_url TEXT;
+      ALTER TABLE articles ADD COLUMN IF NOT EXISTS views_count INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE articles ADD COLUMN IF NOT EXISTS shares_count INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE articles ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT false;
+      CREATE INDEX IF NOT EXISTS articles_published_idx ON articles (status, published_at DESC);
+      CREATE INDEX IF NOT EXISTS articles_category_idx ON articles (category);
+      CREATE TABLE IF NOT EXISTS article_bookmarks (
+        article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+        user_key   TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (article_id, user_key)
+      );
+      CREATE TABLE IF NOT EXISTS subscribers (
+        id         TEXT PRIMARY KEY DEFAULT ('sub_' || substr(md5(random()::text || clock_timestamp()::text), 1, 12)),
+        email      TEXT NOT NULL,
+        user_id    TEXT,
+        kind       TEXT NOT NULL CHECK (kind IN ('all', 'author', 'category')),
+        value      TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS subscribers_unique_idx ON subscribers (LOWER(email), kind, value);
+      CREATE INDEX IF NOT EXISTS subscribers_user_idx ON subscribers (user_id);
+    `);
+
+    // Give every pre-existing article a clean, unique slug (only rows that
+    // do not have one yet, so this is a no-op on later boots).
+    {
+      const { rows: missing } = await pool.query<{ id: string; title: string }>(
+        'SELECT id, title FROM articles WHERE slug IS NULL OR slug = \'\''
+      );
+      if (missing.length > 0) {
+        const { rows: taken } = await pool.query<{ slug: string }>('SELECT slug FROM articles WHERE slug IS NOT NULL AND slug <> \'\'');
+        const used = new Set(taken.map((r) => r.slug));
+        for (const row of missing) {
+          const slug = makeUniqueSlug(row.title, used);
+          used.add(slug);
+          await pool.query('UPDATE articles SET slug = $2 WHERE id = $1', [row.id, slug]);
+        }
+      }
+      await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS articles_slug_idx ON articles (slug)');
+    }
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS comments (
